@@ -54,13 +54,17 @@ separate PostgreSQL extension.
     pginstall server stop
     pginstall server status
     
-    pginstall build /path/to/sources/of/extension
+    pginstall build extname
     pginstall upload extname
 
     pginstall repo ls
-    pginstall repo add extname uri description
+    pginstall repo add extension-full-name uri description
     pginstall repo rm extname [ ... ]
     pginstall repo update
+
+Where `extension-full-name` is expected to be an *Extension Full Name* as
+described below, and `extname` is an *Extension Name*, which is either an
+*Extension Full Name* or an *Extension Short Name*.
 
 ## Extension Names and Avoiding Singleton Central Registries
 
@@ -118,10 +122,14 @@ The role of the *Repository Server* is to publish the list of available
 extensions and to deliver the *binary archive* for any specific extension,
 or extension's version.
 
+<!-- TODO: check how PostGIS works against *Full Names* and URIs.
+
 It's possible too register the same *extension name* several time: the
 unique identifier of an *extension archive* is composed of the *name* and
 the *default_version* of the extension. Then the whole list of upgrade paths
 are maintained in the *Repostory Server* to better serve clients.
+
+ -->
 
 The *Repository Server* is publishing the information in the *JSON* format
 over the *HTTP* protocol. Its main API consists of:
@@ -161,6 +169,8 @@ Authenticated API:
     http://host.domain.tld/add/pgversion           POST: version, path/to/pg_config
     http://host.domain.tld/rm/pgversion
 
+    http://host.domain.tld/build/pgversion
+
 ### Repository Server JSON format
 
 TODO, per URL?
@@ -193,10 +203,10 @@ TODO. The naming must take into account:
 
 The *Repository Manager* is an helper application making it easier to
 maintain ones own repository of extensions. It allows adding extension
-*sources* to the repository. A *source* is an extension name, a location URI
-and a description.
+*sources* to the repository. A *source* is an extension full name, a
+location URI and a description.
 
-In its first version, `pginstall` only support git compatible URIs.
+Note: In its first version, `pginstall` only support github compatible URIs.
 
 When adding an extension, it is being built locally then uploaded to the
 locally configured *Repository Server*. To enable the same extension sources
@@ -213,14 +223,28 @@ TODO: review the HTTP API so that it's easy to handle a build farm, or maybe
 This extension is a `ProcessUtility_hook` that gets involved for the
 following commands:
 
-    CREATE EXTENSION
-    ALTER EXTENSION ... UPDATE ...
+    CREATE EXTENSION extname;
+    ALTER EXTENSION extname UPDATE ...
 
 Its role is to check that the extension asked for is available, possibly in
 the version that's being asked, and to then fetch the extension archive
 (over HTTP, using [libcurl](http://curl.haxx.se/libcurl/)) and unpack its
 files at the right places on the file system given the *Manifest* file in
 the archive and the local client setup.
+
+When unambiguous, it's possible to use the *Extension Short Name* in the
+`CREATE EXTENSION` and `ALTER EXTENSION` commands. If there's more than one
+known *Extension Full Name* matching the given *Extension Short Name*, an
+ERROR is signaled with the list of alternatives to choose from.
+
+    $ CREATE EXTENSION prefix;
+    ERROR: Extension short name "prefix" matches several providers
+    DETAIL: The extensions "github.com/dim/prefix" and
+            "github.com/fdr/prefix" matches the short name "prefix".
+    HINT: Please use the full name of the extension you want to install.
+  
+    $ CREATE EXTENSION "github.com/fdr/prefix";
+    CREATE EXTENSION
 
 TODO: review the local setup
 
