@@ -28,12 +28,32 @@ To achieve that goal, we need several software components to play together:
     extension archive and its Manifest,
 
   - A repository management application that drives the *Build System* over
-    a list of extensions and prepare the binary archives for those.
+    a list of extensions and prepare the binary archives for those,
+    
+  - A *Build Farm* composed of one or more *Animals* each able of building
+    extensions for one or more PostgreSQL versions.
 
 In the first version of the `pginstall` application, the build system and
 the repository management applications are provided with a *Command Line
 Interface* only. In a later version, a full control web application might be
 added so as to make it easier to use in some cases.
+
+## A distributed Software Architecture
+
+A single server is provided, which is able to serve all given roles. When
+building an extension locally on your development machine, a single server
+is expected to allow you to:
+
+  - build your extension,
+  - publish it,
+  - serving it to a testing PostgreSQL client.
+
+The setup of the system is maintained in plain text files, so that it's
+possible to setup the PostgreSQL database service location. It also makes it
+possible to run a *Build Farm Animal* wihout ever needing to run a
+PostgreSQL database service.
+
+The PostgreSQL service is used to maintain the *Repository Server* data.
 
 ## A single Command Line application to rule them all
 
@@ -43,24 +63,32 @@ separate PostgreSQL extension.
 
     pginstall config dburi postgresql://host:port/dbname    
     pginstall config port 8042
-    pginstall config build-path /tmp/pginstall
     pginstall config archive-path /var/cache/pginstall
     pginstall config server http://pginstall.mydomain.tld/
     pginstall config auth
-    pginstall config pg 9.3 /path/to/9.3/bin/pg_control
-    pginstall config pg 9.2 /path/to/9.2/bin/pg_control
-        
+    
     pginstall server start
     pginstall server stop
     pginstall server status
-    
-    pginstall build extname
-    pginstall upload extname
 
+    pginstall animal config build-root /tmp/pginstall
+    pginstall animal config gmake /path/to/gmake
+    pginstall animal pg ls
+    pginstall animal pg add /path/to/pg_config [ localhost 5432 ] # installcheck
+    pginstall animal pg rm /path/to/pg_config
+
+    pginstall animal register server-uri
+    pginstall buildfarm ls
+        
     pginstall repo ls
     pginstall repo add extension-full-name uri description
     pginstall repo rm extname [ ... ]
-    pginstall repo update
+    
+    pginstall repo build extname
+    pginstall repo build-world
+
+    pginstall repo update extname
+    pginstall repo update-world
 
 Where `extension-full-name` is expected to be an *Extension Full Name* as
 described below, and `extname` is an *Extension Name*, which is either an
@@ -160,16 +188,16 @@ Public non authenticated API:
 
 Authenticated API:
 
-    http://host.domain.tld/upload/extname          PUT: archive bytes
-
     http://host.domain.tld/add/extension/extname   POST: uri, description
     http://host.domain.tld/rm/extension/extname
     http://host.domain.tld/update/extension/extname
 
-    http://host.domain.tld/add/pgversion           POST: version, path/to/pg_config
-    http://host.domain.tld/rm/pgversion
-
-    http://host.domain.tld/build/pgversion
+    http://host.domain.tld/animal/register         POST: json "specs"
+    http://host.domain.tld/animal/list/pg
+    http://host.domain.tld/animal/build/extname    application/octet-stream
+    
+    http://host.domain.tld/build/extname
+    http://host.domain.tld/update/extname
 
 ### Repository Server JSON format
 
@@ -185,6 +213,40 @@ TODO: Also, the *Build System* edits the control file to add a `directory`
       parameter, in order to control where to store the extension's scripts
       and auxilliary control files and documentation, separately from the
       main control file.
+
+## The `pginstall` Build Farm
+
+The *Build Farm* is a service of the *Repository Server*, and the
+*Repository Server* itself is a buildfarm member by default.
+
+Each *Animal* in the *Build Farm* is running a full server, and may or may
+not serve a repository. A PostgreSQL database service is only needed to run
+the repository, running a *Bare Animal* does not require the database
+service.
+
+Each *Animal* provides at least one *PostgreSQL Server Development
+Environment* such as provided by a `postgresql-server-dev-X.Y` debian
+package.
+
+Each *Animal* must register itself to its *Repository Server*, and the local
+`server` configuration item is then published. The `server` must be an URI
+that the *Repository Server* knows how to communicate with using the `HTTP`
+protocol.
+
+When registering the *Animal* published to the *Repository Server* its
+specification, which are the detailed list of the PostgreSQL development
+environments available, local architecture and other relevant platform
+information.
+
+The *Repository Server* can then ask an *Animal* to build an extension using
+the HTTP URL `/animal/build/extname`, sending the full path of the
+`pg_config` to use, and the result is the archive artefact obtained with the
+specified `pg_config` build setup.
+
+TODO: Maybe send an URI where to publish the artefact instead, and have the
+      `animal/build/extname` return the build log while it happens instead.
+      When it's done, the animal can then hit previously given URI and `PUT`
+      there the just build artefact.
 
 #### What is a platform
 
