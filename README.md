@@ -64,11 +64,6 @@ separate PostgreSQL extension.
 
 ## The Extension Archive Format
 
-We're using [libarchive](http://www.libarchive.org/) for the archiving
-support in the C coded extension in PostgreSQL, and the
-[archive](https://github.com/froydnj/archive) and the
-[Salza2](http://www.cliki.net/Salza2) Common Lisp librairies to produce it.
-
 The Archive contains the files built by the *PGXS* install command `make
 install`, plus a `pginstall` specific *Manifest* file, in the following
 format:
@@ -84,6 +79,19 @@ format:
 
 See the *Build System* section for details about the relative *path* to be
 found in the *Manifest*.
+
+The specific archive format is morally equivalent to a *tarball*, which
+format exactly is in use is part of the HTTP header, using one of the
+following *content-type* values:
+
+  - `application/zip`
+  - `application/gzip`
+  - `application/x-tar`
+  - `application/x-rar-compressed`
+
+Other types are accepted, provided that they are automatically handled by
+the [libarchive](http://www.libarchive.org/), and are expected to be
+received under the `application/octet-stream` *content-type*.
 
 ## The `pginstall` Repository Server
 
