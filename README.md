@@ -62,6 +62,25 @@ separate PostgreSQL extension.
     pginstall repo rm extname [ ... ]
     pginstall repo update
 
+## Extension Names and Avoiding Singleton Central Registries
+
+An *extension name* is either a *short name* or a *full name*, where the
+*full name* of the extension allows the system to identify it uniquely,
+without resorting to a separate registry service.
+
+The *full name* of an extension is a partial URI where the *scheme name*,
+*query* and *fragment* have been omited. An example of such an *Extension
+Full Name* is `github.com/dim/prefix`.
+
+The *short name* of an extension is the last element of the URL *path*. For
+example, the *Extension Short Name* of `github.com/dim/prefix` is `prefix`.
+
+Everywhere an extension name is expected a *short name* or a *full name* may
+be given. When a *short name* is given and more than a single *full name*
+are matching it, then an error occurs and the candidates are made available.
+The user is then expected to choose among the candidates and try again with
+the extension *full name* of his or her choice.
+
 ## The Extension Archive Format
 
 The Archive contains the files built by the *PGXS* install command `make
@@ -165,7 +184,7 @@ TODO. OS name, OS version, Architecture, ...
 
 TODO. The naming must take into account:
 
-  - extension name
+  - extension full name
   - extension default_version
   - PostgreSQL target version(s)
   - Platform constraints if any (when using modules only)
