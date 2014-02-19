@@ -62,9 +62,9 @@ named `pginstall`, except for the client-side application that needs to be a
 separate PostgreSQL extension.
 
     pginstall config dburi postgresql://host:port/dbname    
-    pginstall config port 8042
+    pginstall config listen-port 8042
+    pginstall config server-uri http://pginstall.mydomain.tld/
     pginstall config archive-path /var/cache/pginstall
-    pginstall config server http://pginstall.mydomain.tld/
     pginstall config auth
     
     pginstall server start
@@ -73,12 +73,13 @@ separate PostgreSQL extension.
 
     pginstall animal config build-root /tmp/pginstall
     pginstall animal config gmake /path/to/gmake
+
+    pginstall animal register server-uri name animal-uri
     pginstall animal pg ls
-    pginstall animal pg add /path/to/pg_config [ localhost 5432 ] # installcheck
+    pginstall animal pg add /path/to/pg_config
     pginstall animal pg rm /path/to/pg_config
 
-    pginstall animal register server-uri
-    pginstall buildfarm ls
+    pginstall animal ls
         
     pginstall repo ls
     pginstall repo add extension-full-name uri description

@@ -6,22 +6,33 @@
     :author "Dimitri Fontaine <dimitri@2ndQuadrant.fr>"
     :license "The PostgreSQL Licence"
     :depends-on (#:uiop			; host system integration
-		 #:cl-log		; logging
 		 #:postmodern		; PostgreSQL protocol implementation
-		 #:split-sequence	; some parsing is made easy
-		 #:cl-fad		; file and directories
 		 #:esrap		; parser generator
-		 #:alexandria		; utils
 		 #:drakma		; http client, download archives
-		 #:zip			; support for zip archive files
 		 #:local-time		; UDP date parsing
-                 #:cl-markdown          ; To produce the website
+		 #:py-configparser	; Read old-style INI config files
+                 #:iolib                ; I/O library
+                 #:iolib.os             ; OS level interface, pathnames
+                 #:puri                 ; URI validation and manipulation
+                 #:cl-ppcre             ; Regular Expressions
 		 )
     :components
     ((:module "src"
 	      :components
-              ((:module animal
+              ((:module common
 			:components
 			((:file "package")
-			 (:file "animal" :depends-on ("package"))))))))
+                         (:file "dburi" :depends-on ("package"))
+			 (:file "pgsql" :depends-on ("package" "dburi"))))
+               (:module config
+                        :depends-on ("common")
+			:components
+			((:file "package")
+			 (:file "config" :depends-on ("package"))))
+               (:module animal
+                        :depends-on ("common")
+                        :components
+                        ((:file "package")
+                         (:file "dao" :depends-on ("package"))
+                         (:file "animal" :depends-on ("package" "dao"))))))))
 

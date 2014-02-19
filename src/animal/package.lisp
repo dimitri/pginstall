@@ -3,4 +3,4 @@
 ;;; PostgreSQL installations.
 ;;;
 (defpackage #:pginstall.animal
-  (:use #:cl #:postmodern))
+  (:use #:cl #:postmodern #:pginstall.common #:pginstall.config))
