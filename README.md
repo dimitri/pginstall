@@ -71,10 +71,13 @@ separate PostgreSQL extension.
     pginstall server stop
     pginstall server status
 
-    pginstall animal config build-root /tmp/pginstall
-    pginstall animal config gmake /path/to/gmake
+    pginstall config animal-name bat
+    pginstall config animal-uri http://localhost:8042/
+    pginstall config build-root /tmp/pginstall
+    pginstall config gmake /path/to/gmake
 
-    pginstall animal register server-uri name animal-uri
+    pginstall animal name bat
+    pginstall animal register server-uri
     pginstall animal pg ls
     pginstall animal pg add /path/to/pg_config
     pginstall animal pg rm /path/to/pg_config
