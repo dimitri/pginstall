@@ -15,6 +15,7 @@
                  #:iolib.os             ; OS level interface, pathnames
                  #:puri                 ; URI validation and manipulation
                  #:cl-ppcre             ; Regular Expressions
+                 #:alexandria           ; Some utilities
 		 )
     :components
     ((:module "src"
@@ -34,5 +35,6 @@
                         :components
                         ((:file "package")
                          (:file "dao" :depends-on ("package"))
-                         (:file "animal" :depends-on ("package" "dao"))))))))
+                         (:file "animal" :depends-on ("package" "dao"))
+                         (:file "build"  :depends-on ("package" "dao" "animal"))))))))
 

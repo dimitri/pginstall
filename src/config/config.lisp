@@ -19,6 +19,9 @@
 (defparameter *gmake* "/usr/bin/make"
   "Path to the GNU Make command-line tool.")
 
+(defparameter *git* "/usr/bin/git"
+  "Path to the git command-line tool.")
+
 (defparameter *build-root* "/tmp/pginstall/"
   "Path where to build the PostgreSQL extensions on the buildfarm animal.")
 
@@ -46,6 +49,7 @@
      ("uri"          *animal-uri*   check-uri)
      ("build-root"   *build-root*   check-and-make-directory)
      ("gmake"        *gmake*        check-executable)
+     ("git"          *git*          check-executable)
      ("server"       *repo-server*  check-uri)))
   "Association list between configuration option names and special variables.")
 

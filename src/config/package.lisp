@@ -16,6 +16,9 @@
            #:*archive-path*
 
            ;; build animal
+           #:*animal-name*
+           #:*animal-uri*
+           #:*git*
            #:*gmake*
            #:*build-root*
            #:*repo-server*

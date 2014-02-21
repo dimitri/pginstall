@@ -83,6 +83,7 @@ separate PostgreSQL extension.
     pginstall animal pg rm /path/to/pg_config
 
     pginstall animal ls
+    pginstall animal build extname /path/to/pg_config
         
     pginstall repo ls
     pginstall repo add extension-full-name uri description

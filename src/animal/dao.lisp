@@ -32,18 +32,10 @@
 
 (defmethod print-object ((extension extension) stream)
   (print-unreadable-object (extension stream :type t :identity t)
-    (with-slots (id shortname fullname) extension
-      (format stream "~d ~a [~a]" id shortname fullname))))
-
-(defun build-extension (name)
-  "Build extension matching NAME, which can be either a full name or a short
-   name."
-  ;; TODO: implement with-psql-transaction and co in config module
-  (with-psql-connection (*dburi*)
-    (let* ((slot      'shortname)     ; TODO: compute 'shortname or 'fullname
-           (extension (select-dao 'extension (:= slot name))))
-      (uiop:run-program *gmake*))))
-
+    (let ((id (when (slot-boundp extension 'id)
+                (ext-id 'id))))
+      (with-slots (shortname fullname) extension
+        (format stream "~d ~a [~a]" id shortname fullname)))))
 
 
 ;;;
@@ -165,14 +157,27 @@
   (:metaclass dao-class)
   (:keys id))
 
-(defmethod initialize-instance :after ((pgconfig pgconfig) &key)
-  "Automatically fetch platform."
-  (let* ((animal-name (slot-value pgconfig 'animal-name))
-         (animal      (car (select-dao 'animal (:= 'name animal-name))))
-         (config      (run-pg-config (slot-value pgconfig 'pg-config))))
-    (setf (slot-value pgconfig 'animal) (animal-id animal))
+(defmethod initialize-pgconfig ((pgconfig pgconfig))
+  "Use the run-pg-config function to grab values from the pg_config command
+   and fill-in the PGCONFIG object."
+  (let ((config (run-pg-config (slot-value pgconfig 'pg-config))))
     (loop for (key . value) in config
        do (setf (slot-value pgconfig key) value))))
+
+(defmethod initialize-instance :after ((pgconfig pgconfig) &key)
+  "Automatically fetch platform."
+  (when (and (not (slot-boundp pgconfig 'animal))
+             (slot-boundp pgconfig 'animal-name))
+    (let* ((animal-name (slot-value pgconfig 'animal-name))
+           (animal      (car (select-dao 'animal (:= 'name animal-name)))))
+      (setf (slot-value pgconfig 'animal) (animal-id animal))))
+
+  (when (slot-boundp pgconfig 'pg-config)
+    (unless (slot-boundp pgconfig 'configure)
+      (initialize-pgconfig pgconfig)))
+
+  (unless (slot-boundp pgconfig 'animal-name)
+    (setf (slot-value pgconfig 'animal-name) *animal-name*)))
 
 (defmethod print-object ((pgconfig pgconfig) stream)
   (print-unreadable-object (pgconfig stream :type t :identity t)
