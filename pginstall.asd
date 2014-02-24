@@ -16,6 +16,7 @@
                  #:puri                 ; URI validation and manipulation
                  #:cl-ppcre             ; Regular Expressions
                  #:alexandria           ; Some utilities
+                 #:archive              ; produce an extension archive file
 		 )
     :components
     ((:module "src"
@@ -35,6 +36,10 @@
                         :components
                         ((:file "package")
                          (:file "dao" :depends-on ("package"))
-                         (:file "animal" :depends-on ("package" "dao"))
-                         (:file "build"  :depends-on ("package" "dao" "animal"))))))))
+                         (:file "animal"  :depends-on ("package" "dao"))
+                         (:file "archive" :depends-on ("package" "dao"))
+                         (:file "build"  :depends-on ("package"
+                                                      "dao"
+                                                      "archive"
+                                                      "animal"))))))))
 

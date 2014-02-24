@@ -44,9 +44,9 @@
 (defun uname (option)
   "Gets the output of `uname -option`."
   (multiple-value-bind (code stdout stderr)
-      (iolib.os:run-program "uname" `(,option))
+      (run-program `("uname" ,option))
     (declare (ignore stderr))
-    (when (< 0 code)
+    (when (= 0 code)
       (with-input-from-string (s stdout)
         (read-line s)))))
 
@@ -127,9 +127,9 @@
   "Run the pg_config utility given at PATH and fetch interesing values."
   (let (ret)
     (multiple-value-bind (code stdout stderr)
-        (iolib.os:run-program path)
+        (run-program path)
       (declare (ignore stderr))
-      (when (< 0 code)
+      (when (= 0 code)
         (with-input-from-string (s stdout)
           (loop for line = (read-line s nil nil)
              while line
