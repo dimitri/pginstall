@@ -49,7 +49,9 @@
   (run-program `(,*git*
                  "clone"
                  ,(uri extension)
-                 ,directory)))
+                 ,directory
+                 "--depth"
+                 "1")))
 
 (defun git-clean-fdx (directory)
   "Cleanup the DIRECTORY before building again an extension."
@@ -83,15 +85,13 @@
        ;; we want the symbols in the destructuring-bind list here to be read in
        ;; the PGINSTALL.ANIMAL package, not the KEYWORD package.
        ;; http://www.lispworks.com/documentation/HyperSpec/Body/03_dad.htm
-         (destructuring-bind (&key ((configure configure))
-                                   ((version version))
-                                   ((cc cc))
-                                   ((cflags cflags))
-                                   ((docdir docdir))
-                                   ((sharedir sharedir))
-                                   ((pkglibdir pkglibdir)))
+         (destructuring-bind (&key version
+                                   configure cc cflags
+                                   docdir sharedir pkglibdir)
              ;; and run-pg-config is returning an ALIST, we want a PLIST here.
-             (alexandria:alist-plist config-values)
+             (alexandria:alist-plist
+              (loop for (key . value) in config-values
+                 collect (cons (intern key (find-package "KEYWORD")) value)))
 
            (let* ((pgconfig (make-instance 'pgconfig
                                            :pg-config pgconfig-path
