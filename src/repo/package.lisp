@@ -36,4 +36,5 @@
            #:pg-version
            #:pg-configure
            #:pg-cc
-           #:pg-cflags))
+           #:pg-cflags
+           #:list-pg-config-in-path))
