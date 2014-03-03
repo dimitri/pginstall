@@ -319,3 +319,18 @@ TODO: review the local setup
     pginstall.library_path = 'path/where/to/unpack/modules.so'
 
 
+# Hosting internal (private) software
+
+In order to allow for private organisation to use the `pginstall` system
+with their own private code (PL or C coded) added to a list of whitelisted
+extensions, pginstall allows to mirror and merge *upstream repositories*.
+
+## Mirroring
+
+TODO: describe how to setup mirroring from one or several *upstream
+repositories*.
+
+## Merging
+
+TODO: describe how to setup pginstall to host some local packages and merge
+packages from an *upstream repository*.
