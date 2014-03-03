@@ -9,4 +9,6 @@
         #:pginstall.repo
         #:postmodern
         #:iolib.os
-        #:iolib.pathnames))
+        #:iolib.pathnames)
+  (:import-from #:iolib.base
+                #:read-file-into-string))

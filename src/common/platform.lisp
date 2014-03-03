@@ -76,11 +76,15 @@
 ;;   KeyName:    value
 ;;   OtherKey:   Value with spaces
 ;;
-(defun parse-properties-output (stdout)
+(defun parse-properties-output (stdout &optional comment-prefixes)
   "Parse properties result from commands such as `sw_vers` or `lsb_release`."
   (with-input-from-string (s stdout)
-    (loop :for line = (read-line s nil nil)
+    (loop :for line := (read-line s nil nil)
        :while line
+       :when (or (null comment-prefixes)
+                 (and comment-prefixes
+                      (< 1 (length line))
+                      (member (char line 0) comment-prefixes :test #'char=)))
        :collect (cl-ppcre:register-groups-bind (key value)
-                    ("([A-Za-z]*):\\s+(.*)" line)
+                    ("([A-Za-z]*)\\s*[:=]\\s+(.*)" line)
                   (cons key value)))))

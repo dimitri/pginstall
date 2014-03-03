@@ -7,6 +7,15 @@
 
 (in-package #:pginstall.animal)
 
+;;;
+;;; First, some tooling
+;;;
+(defun parse-default-version (control-file)
+  "Return the `default_version` property of the CONTROL-FILE."
+  (let ((props
+         (parse-properties-output (read-file-into-string control-file))))
+    (string-trim "'" (cdr (assoc "version" props :test #'string=)))))
+
 (defun $libdir-to-module-pathname (source target)
   "Parse given SCRIPT and replace strings \"AS '$libdir/...'\" to \"AS
    'MODULE_PATHNAME/...'\"."
@@ -23,6 +32,65 @@
   target)
 
 ;;;
+;;; Even lower-level tooling, files and directories.
+;;;
+(defun copy-files-into (directory files &optional (base-dir directory))
+  "Copy FILES into DIRECTORY and return the list of files copied."
+  (loop for file-path in files
+     for target = (file-path-namestring
+                   (merge-file-paths
+                    (file-path-namestring (file-path-file file-path))
+                    directory))
+     for source = (file-path-namestring file-path)
+     do (iolib.base:copy-file source target)
+     collect (enough-namestring target base-dir)))
+
+(defun archive-extdir (extension archive-dir)
+  "Return the ARCHIVE-DIR/{EXTENSION-SHORT-NAME}/ path where we want to
+   store scripts, auxilliary control files, and docs."
+  (merge-pathnames
+   (make-pathname :directory `(:relative ,(short-name extension))) archive-dir))
+
+(defun make-archive-dir (extension basename)
+  "Ensure *build-root*/BASENAME exists, removing a possibly existing old copy."
+  (declare (type extension extension))
+  (let ((archive-dir
+         (merge-pathnames
+          (make-pathname :directory `(:relative ,basename)) *build-root*)))
+
+    ;; first, cleanup
+    (when (probe-file archive-dir)
+      (delete-files archive-dir :recursive t))
+
+    ;; now, prepare the target directories we need, and return the archive-dir
+    (prog1
+        (ensure-directories-exist archive-dir)
+      (ensure-directories-exist (archive-extdir extension archive-dir)))))
+
+;;;
+;;; Of course we want a compressed tarball.
+;;;
+(defun gzip (filename)
+  "Run the `gzip -9` command on given filename"
+  (let ((target (format nil "~a.gz" filename)))
+    (format t "gzip -9 ~a~%" filename)
+
+    (when (probe-file target)
+      (delete-file target))
+
+    (multiple-value-bind (code stdout stderr)
+        (run-program `("gzip" "-9" ,filename))
+      (declare (ignore stdout))
+      (unless (= 0 code)
+        (error "Error during gzip -9: ~a~%" stderr)))
+
+    ;; return the new filename
+    target))
+
+
+;;;
+;;; The main functions are there.
+;;;
 ;;; Yes, the name has been picked to "work" with default emacs indenting.
 ;;;
 (defmacro with-filter-list-directory (dir &body filter)
@@ -38,17 +106,6 @@
                     (push filename files))))))
          (walk-directory ,dir ,push-files))
        files)))
-
-(defun copy-files-into (directory files &optional (base-dir directory))
-  "Copy FILES into DIRECTORY and return the list of files copied."
-  (loop for file-path in files
-     for target = (file-path-namestring
-                   (merge-file-paths
-                    (file-path-namestring (file-path-file file-path))
-                    directory))
-     for source = (file-path-namestring file-path)
-     do (iolib.base:copy-file source target)
-     collect (enough-namestring target base-dir)))
 
 (defun prepare-archive-files (extension archive-dir docdir pkglibdir sharedir)
   "Prepare files installed with PGXS command `make install` to take part of
@@ -76,13 +133,7 @@
          (doc-files      (with-filter-list-directory docdir
                            (eq kind :regular-file)))
 
-         (archive-extdir (merge-pathnames
-                          (make-pathname :directory `(:relative ,extname))
-                          archive-dir)))
-
-    ;; prepare the archive directories layout
-    (loop for dir in (list archive-dir archive-extdir)
-       do (ensure-directories-exist dir))
+         (archive-extdir (archive-extdir extension archive-dir)))
 
     ;; put file at their right place for the archive
     (let ((ctrl      (copy-files-into archive-dir control-files))
@@ -110,39 +161,28 @@
       (append (list (enough-namestring manifest archive-dir))
               ctrl libs scripts docs))))
 
-(defun gzip (filename)
-  "Run the `gzip -9` command on given filename"
-  (let ((target (format nil "~a.gz" filename)))
-    (format t "gzip -9 ~a~%" filename)
-
-    (when (probe-file target)
-      (delete-file target))
-
-    (multiple-value-bind (code stdout stderr)
-        (run-program `("gzip" "-9" ,filename))
-      (declare (ignore stdout))
-      (unless (= 0 code)
-        (error "Error during gzip -9: ~a~%" stderr)))
-
-    ;; return the new filename
-    target))
-
 (defun pack-archive (extension version &key docdir pkglibdir sharedir)
   "Pack an archive for given EXTENSION and PostgreSQL version."
-  (check-type extension extension)
-  (let* ((platform         (make-instance 'platform))
-         (archive-name     (format nil "~a-~a-~a-~a"
-                                   (short-name extension) version
+  (declare (type extension extension))
+  (let* ((archive-basename (format nil "~a--~a" (short-name extension) version))
+         (archive-dir      (make-archive-dir extension archive-basename))
+         (filelist         (prepare-archive-files extension
+                                                  archive-dir
+                                                  docdir
+                                                  pkglibdir
+                                                  sharedir))
+         (platform         (make-instance 'platform))
+         (ext-version      (parse-default-version
+                            (merge-pathnames (second filelist) archive-dir)))
+         (archive-name     (format nil "~a--~a--~a--~a--~a"
+                                   (short-name extension)
+                                   ext-version
+                                   version
                                    (substitute #\_ #\Space (os-name platform))
                                    (os-version platform)))
          (archive-filename (merge-pathnames (make-pathname :name archive-name
                                                            :type "tar")
-                                            *build-root*))
-         (archive-dir
-          (merge-pathnames (make-pathname :directory `(:relative ,archive-name))
-                           *build-root*))
-         (filelist
-          (prepare-archive-files extension archive-dir docdir pkglibdir sharedir)))
+                                            *build-root*)))
 
     ;; build the archive, it's all ready
     (let ((*default-pathname-defaults*
