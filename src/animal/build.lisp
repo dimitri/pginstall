@@ -13,8 +13,8 @@
   (let ((build-root
          (merge-pathnames
           (make-pathname :directory `(:relative ,(full-name extension)))
-          (make-pathname :directory *build-root*))))
-    (directory-namestring (ensure-directories-exist build-root))))
+          *build-root*)))
+    (directory-namestring (ensure-directories-exist (namestring build-root)))))
 
 (defun extension-install-prefix (extension vers)
   "Returns the directory where to `make install` an EXTENSION for given
