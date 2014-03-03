@@ -96,16 +96,17 @@
 (defmacro with-filter-list-directory (dir &body filter)
   "Walk DIR and evaluates BODY, then return FILES."
   (let ((push-files (gensym)))
-    `(let (files)
-       (let ((,push-files
-              (lambda (name kind parent depth)
-                (declare (ignorable name kind parent depth))
-                (when ,@filter
-                  (let ((filename
-                         (merge-file-paths name (merge-file-paths parent ,dir))))
-                    (push filename files))))))
-         (walk-directory ,dir ,push-files))
-       files)))
+    `(when (directory-exists-p ,dir)
+       (let (files)
+         (let ((,push-files
+                (lambda (name kind parent depth)
+                  (declare (ignorable name kind parent depth))
+                  (when ,@filter
+                    (let ((filename
+                           (merge-file-paths name (merge-file-paths parent ,dir))))
+                      (push filename files))))))
+           (walk-directory ,dir ,push-files))
+         files))))
 
 (defun prepare-archive-files (extension archive-dir docdir pkglibdir sharedir)
   "Prepare files installed with PGXS command `make install` to take part of
