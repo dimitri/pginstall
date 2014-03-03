@@ -31,33 +31,48 @@
   (check-type extension extension)
   (check-type pgconfig pgconfig)
 
-  (format t "cd ~a; make DESTDIR=~a install~%" build-root prefix)
+  (format t "cd ~a" build-root)
+  (format t "make DESTDIR=~a install~%" prefix)
 
   ;; we copy the environment so that we can scribble on the copy
-  (let* ((environment    (environment)))
+  (let* ((environment (environment)))
     (with-current-directory build-root
       (setf (environment-variable "CC") (pg-cc pgconfig))
-      (run-program `(,*gmake*
-                     ,(format nil "PGCONFIG=~s" (pg-config pgconfig))
-                     ,(format nil "DESTDIR=~s" prefix))
-                   :environment environment))))
+      (multiple-value-bind (code stdout stderr)
+          (run-program `(,*gmake*
+                         ,(format nil "PGCONFIG=~a" (pg-config pgconfig))
+                         ,(format nil "DESTDIR=~a" prefix)
+                         "install")
+                       :environment environment)
+        (unless (= 0 code)
+          (error "Error during make install: ~a~%" stderr))
+        (format t "~a~%" stdout)
+        stdout))))
 
 (defun git-clone (extension directory)
   "Fetch the current version of the code for given extension."
   (check-type extension extension)
   (format t "git clone ~a ~a~%" (short-name extension) directory)
-  (run-program `(,*git*
-                 "clone"
-                 ,(uri extension)
-                 ,directory
-                 "--depth"
-                 "1")))
+  (multiple-value-bind (code stdout stderr)
+      (run-program `(,*git*
+                     "clone"
+                     ,(uri extension)
+                     ,directory))
+    (unless (= 0 code)
+      (error "Error during git clone: ~a~%" stderr))
+    (format t "~a~%" stdout)
+    stdout))
 
 (defun git-clean-fdx (directory)
   "Cleanup the DIRECTORY before building again an extension."
   (format t "git clean -fdx ~a~%" directory)
   (with-current-directory directory
-    (run-program `(,*git* "clean" "-fdx"))))
+    (multiple-value-bind (code stdout stderr)
+        (run-program `(,*git* "clean" "-fdx"))
+      (unless (= 0 code)
+        (error "Error during git clean -fdx: ~a~%" stderr))
+      (format t "~a~%" stdout)
+      stdout)))
 
 
 ;;;
@@ -66,8 +81,10 @@
 ;;; On the animal, we don't have access to the main repository database, so
 ;;; the arguments we get here are all we are going to be able to work with.
 ;;;
-(defun build-extension (extension-full-name extension-uri pgconfig-path-list
-                        &key ((animal-name *animal-name*) *animal-name*))
+(defun build-extension (extension-full-name extension-uri
+                        &key
+                          (pgconfig-path-list (list-pg-config-in-path))
+                          ((animal-name *animal-name*) *animal-name*))
   "Build extension EXTENSION-FULL-NAME, on the build animal."
   (let* ((extension      (make-instance 'extension
                                         :full-name extension-full-name
@@ -77,6 +94,8 @@
                            :DOCDIR :PKGLIBDIR :SHAREDIR)))
 
     ;; git clone the extension sources
+    (format t "rm -rf ~a~%" root)
+    (delete-files root :recursive t)
     (git-clone extension root)
 
     (loop for pgconfig-path in pgconfig-path-list

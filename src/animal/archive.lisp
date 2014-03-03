@@ -39,7 +39,7 @@
          (walk-directory ,dir ,push-files))
        files)))
 
-(defun copy-files-into (directory files)
+(defun copy-files-into (directory files &optional (base-dir directory))
   "Copy FILES into DIRECTORY and return the list of files copied."
   (loop for file-path in files
      for target = (file-path-namestring
@@ -48,7 +48,7 @@
                     directory))
      for source = (file-path-namestring file-path)
      do (iolib.base:copy-file source target)
-     collect target))
+     collect (enough-namestring target base-dir)))
 
 (defun prepare-archive-files (extension archive-dir docdir pkglibdir sharedir)
   "Prepare files installed with PGXS command `make install` to take part of
@@ -57,36 +57,38 @@
    Returns the FILELIST of pathnames that made it to the archive directory."
   (declare (type extension extension)
            (type pathname docdir pkglibdir sharedir))
-  (let* ((control-files  (with-filter-list-directory sharedir
-                           (string= (file-path-file-type name) "control")))
+  (let* ((extname        (short-name extension))
+         (control-files  (with-filter-list-directory sharedir
+                           (and
+                            (string= (file-path-file-name name) extname)
+                            (string= (file-path-file-type name) "control"))))
 
          (module-files   (with-filter-list-directory pkglibdir
                            (string= (file-path-file-type name) "so")))
 
          (script-files   (with-filter-list-directory sharedir
-                           (string= (file-path-file-type name) "sql")))
+                           (or
+                            (string= (file-path-file-type name) "sql")
+                            (and
+                             (string/= (file-path-file-name name) extname)
+                             (string= (file-path-file-type name) "control")))))
 
          (doc-files      (with-filter-list-directory docdir
                            (eq kind :regular-file)))
 
-         (archive-libdir (merge-pathnames
-                          (make-pathname :directory `(:relative "lib"))
-                          archive-dir))
-
          (archive-extdir (merge-pathnames
-                          (make-pathname :directory
-                                         `(:relative ,(short-name extension)))
+                          (make-pathname :directory `(:relative ,extname))
                           archive-dir)))
 
     ;; prepare the archive directories layout
-    (loop for dir in (list archive-dir archive-libdir archive-extdir)
+    (loop for dir in (list archive-dir archive-extdir)
        do (ensure-directories-exist dir))
 
     ;; put file at their right place for the archive
     (let ((ctrl      (copy-files-into archive-dir control-files))
-          (libs      (copy-files-into archive-libdir module-files))
-          (scripts   (copy-files-into archive-extdir script-files))
-          (docs      (copy-files-into archive-extdir doc-files))
+          (libs      (copy-files-into archive-extdir module-files archive-dir))
+          (scripts   (copy-files-into archive-extdir script-files archive-dir))
+          (docs      (copy-files-into archive-extdir doc-files    archive-dir))
           ;; normalize the filename
           (manifest
            (file-path-namestring
@@ -100,14 +102,30 @@
                                               :if-exists :supersede
                                               :external-format :utf-8)
         (format stream "~&control: ~{~a~^~&~9T~}" ctrl)
-        (format stream "~&module:  ~{~a~^~&~9T~}"  libs)
+        (format stream "~&module:  ~{~a~^~&~9T~}" libs)
         (format stream "~&scripts: ~{~a~^~&~9T~}" scripts)
-        (format stream "~&docs:    ~{~a~^~&~9T~}"    docs))
+        (format stream "~&docs:    ~{~a~^~&~9T~}" docs))
 
       ;; and return the filelist
-      (mapcar (lambda (pathname)
-                (enough-namestring pathname archive-dir))
-              (append (list manifest) ctrl libs scripts docs)))))
+      (append (list (enough-namestring manifest archive-dir))
+              ctrl libs scripts docs))))
+
+(defun gzip (filename)
+  "Run the `gzip -9` command on given filename"
+  (let ((target (format nil "~a.gz" filename)))
+    (format t "gzip -9 ~a~%" filename)
+
+    (when (probe-file target)
+      (delete-file target))
+
+    (multiple-value-bind (code stdout stderr)
+        (run-program `("gzip" "-9" ,filename))
+      (declare (ignore stdout))
+      (unless (= 0 code)
+        (error "Error during gzip -9: ~a~%" stderr)))
+
+    ;; return the new filename
+    target))
 
 (defun pack-archive (extension version &key docdir pkglibdir sharedir)
   "Pack an archive for given EXTENSION and PostgreSQL version."
@@ -115,7 +133,7 @@
   (let* ((platform         (make-instance 'platform))
          (archive-name     (format nil "~a-~a-~a-~a"
                                    (short-name extension) version
-                                   (os-name platform)
+                                   (substitute #\_ #\Space (os-name platform))
                                    (os-version platform)))
          (archive-filename (merge-pathnames (make-pathname :name archive-name
                                                            :type "tar")
@@ -138,5 +156,5 @@
             (archive:write-entry-to-archive archive entry)))))
 
     ;; return the archive filename
-    archive-filename))
+    (gzip (namestring archive-filename))))
 
