@@ -1,9 +1,11 @@
 ;;;
-;;; The build animal is responsible for building extensions against a set of
-;;; PostgreSQL installations.
+;;; The Database Access Objects, as proposed by our PostgreSQL client
+;;; library, allows to hydrate CLOS objects from SQL queries.
+;;;
+;;;   http://marijnhaverbeke.nl/postmodern/postmodern.html#daos
 ;;;
 
-(in-package #:pginstall.animal)
+(in-package #:pginstall.repo)
 
 
 ;;;
@@ -38,26 +40,6 @@
         (format stream "~d ~a [~a]" id shortname fullname)))))
 
 
-;;;
-;;; Get OS specific information about the platform.
-;;;
-(defun uname (option)
-  "Gets the output of `uname -option`."
-  (multiple-value-bind (code stdout stderr)
-      (run-program `("uname" ,option))
-    (declare (ignore stderr))
-    (when (= 0 code)
-      (with-input-from-string (s stdout)
-        (read-line s)))))
-
-(defun find-os-version (os-name)
-  "For Darwin, some post-processing is welcome."
-  (cond ((string= os-name "Darwin")
-         (cl-ppcre:register-groups-bind (version)
-             ("Darwin Kernel Version ([0-9.]+):.*" (uname "-v"))
-           version))
-        (t (uname "-r"))))
-
 (defclass platform ()
     ((id          :col-type integer  :reader platform-id)
      (os-name     :col-type string :col-name os_name    :reader os-name)
@@ -70,9 +52,9 @@
 
 (defmethod initialize-instance :after ((platform platform) &key)
   "Automatically compute os-name, os-version and arch."
-  (let ((os-name (uname "-s")))
+  (destructuring-bind (os-name os-version) (os-name-and-version)
     (setf (slot-value platform 'os-name)    os-name
-          (slot-value platform 'os-version) (find-os-version os-name)
+          (slot-value platform 'os-version) os-version
           (slot-value platform 'arch)       (uname "-m"))))
 
 (defmethod print-object ((platform platform) stream)
@@ -121,28 +103,6 @@
 ;;;
 ;;; The pgconfig entries
 ;;;
-(defvar *pg-config-keys* '(:CONFIGURE :CC :VERSION :CFLAGS))
-
-(defun run-pg-config (path &optional (keys *pg-config-keys*))
-  "Run the pg_config utility given at PATH and fetch interesing values."
-  (let (ret)
-    (multiple-value-bind (code stdout stderr)
-        (run-program path)
-      (declare (ignore stderr))
-      (when (= 0 code)
-        (with-input-from-string (s stdout)
-          (loop for line = (read-line s nil nil)
-             while line
-             do (cl-ppcre:register-groups-bind (key value)
-                    ("([A-Z-]+) = (.*)" line)
-                  (when (member key keys
-                                :test (lambda (key e)
-                                        (string-equal key (symbol-name e))))
-                    (let ((keysym
-                           (find-symbol key (find-package "PGINSTALL.ANIMAL"))))
-                      (push (cons keysym value) ret))))))))
-    ret))
-
 (defclass pgconfig ()
     ((id          :col-type integer     :reader pgconfig-id)
      (animal-name :accessor animal-name :initarg :animal-name)
@@ -162,7 +122,9 @@
    and fill-in the PGCONFIG object."
   (let ((config (run-pg-config (slot-value pgconfig 'pg-config))))
     (loop for (key . value) in config
-       do (setf (slot-value pgconfig key) value))))
+       for keysym = (find-symbol key #. *package*)
+       when keysym
+       do (setf (slot-value pgconfig keysym) value))))
 
 (defmethod initialize-instance :after ((pgconfig pgconfig) &key)
   "Automatically fetch platform."

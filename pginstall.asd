@@ -17,6 +17,7 @@
                  #:cl-ppcre             ; Regular Expressions
                  #:alexandria           ; Some utilities
                  #:archive              ; produce an extension archive file
+                 #:split-sequence       ; split sequences
 		 )
     :components
     ((:module "src"
@@ -24,6 +25,8 @@
               ((:module common
 			:components
 			((:file "package")
+                         (:file "pgconfig" :depends-on ("package"))
+                         (:file "platform" :depends-on ("package"))
                          (:file "dburi" :depends-on ("package"))
 			 (:file "pgsql" :depends-on ("package" "dburi"))))
                (:module config
@@ -31,15 +34,19 @@
 			:components
 			((:file "package")
 			 (:file "config" :depends-on ("package"))))
-               (:module animal
+               (:module repo
                         :depends-on ("common")
+			:components
+			((:file "package")
+                         (:file "dao" :depends-on ("package"))
+			 (:file "setup" :depends-on ("package" "dao"))))
+               (:module animal
+                        :depends-on ("common" "repo")
                         :components
                         ((:file "package")
-                         (:file "dao" :depends-on ("package"))
-                         (:file "animal"  :depends-on ("package" "dao"))
-                         (:file "archive" :depends-on ("package" "dao"))
+                         (:file "animal"  :depends-on ("package"))
+                         (:file "archive" :depends-on ("package"))
                          (:file "build"  :depends-on ("package"
-                                                      "dao"
                                                       "archive"
                                                       "animal"))))))))
 

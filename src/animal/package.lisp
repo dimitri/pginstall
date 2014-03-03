@@ -6,6 +6,7 @@
   (:use #:cl
         #:pginstall.common
         #:pginstall.config
+        #:pginstall.repo
         #:postmodern
         #:iolib.os
         #:iolib.pathnames))
