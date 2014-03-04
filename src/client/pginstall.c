@@ -114,158 +114,82 @@ _PG_init(void)
 	default_control_directory = (char *) palloc(MAXPGPATH);
 	snprintf(default_control_directory, MAXPGPATH, "%s/extension", sharepath);
 
-	/* Archive directory. */
-	PG_TRY();
-	{
-		pginstall_archive_dir =
-			GetConfigOptionByName("pginstall.archive_dir", NULL);
-	}
-	PG_CATCH();
-	{
-		DefineCustomStringVariable("pginstall.archive_dir",
-								   "Path where to download extension archives.",
-								   "",
-								   &pginstall_archive_dir,
-								   "",
-								   PGC_SUSET,
-								   GUC_NOT_IN_SAMPLE,
-								   NULL,
-								   NULL,
-								   NULL);
-		EmitWarningsOnPlaceholders("pginstall.archive_dir");
-	}
-	PG_END_TRY();
+	DefineCustomStringVariable("pginstall.archive_dir",
+							   "Path where to download extension archives.",
+							   "",
+							   &pginstall_archive_dir,
+							   "",
+							   PGC_SUSET,
+							   GUC_NOT_IN_SAMPLE,
+							   NULL,
+							   NULL,
+							   NULL);
 
-	/* Control File Directory */
-	PG_TRY();
-	{
-		pginstall_control_dir =
-			GetConfigOptionByName("pginstall.control_dir", NULL);
-	}
-	PG_CATCH();
-	{
-		DefineCustomStringVariable("pginstall.control_dir",
-								   "Path where to install extension control files.",
-								   "",
-								   &pginstall_control_dir,
-								   default_control_directory,
-								   PGC_SUSET,
-								   GUC_NOT_IN_SAMPLE,
-								   NULL,
-								   NULL,
-								   NULL);
-		EmitWarningsOnPlaceholders("pginstall.control_dir");
-	}
-	PG_END_TRY();
+	DefineCustomStringVariable("pginstall.control_dir",
+							   "Path where to install extension control files.",
+							   "",
+							   &pginstall_control_dir,
+							   default_control_directory,
+							   PGC_SUSET,
+							   GUC_NOT_IN_SAMPLE,
+							   NULL,
+							   NULL,
+							   NULL);
 
-	/* Extension Directory */
-	PG_TRY();
-	{
-		pginstall_extension_dir =
-			GetConfigOptionByName("pginstall.extension_dir", NULL);
-	}
-	PG_CATCH();
-	{
-		DefineCustomStringVariable("pginstall.extension_dir",
-								   "Path where to install extension contents.",
-								   "",
-								   &pginstall_extension_dir,
-								   "",
-								   PGC_SUSET,
-								   GUC_NOT_IN_SAMPLE,
-								   NULL,
-								   NULL,
-								   NULL);
-		EmitWarningsOnPlaceholders("pginstall.extension_dir");
-	}
-	PG_END_TRY();
+	DefineCustomStringVariable("pginstall.extension_dir",
+							   "Path where to install extension contents.",
+							   "",
+							   &pginstall_extension_dir,
+							   "",
+							   PGC_SUSET,
+							   GUC_NOT_IN_SAMPLE,
+							   NULL,
+							   NULL,
+							   NULL);
 
-	/* Repository URL */
-	PG_TRY();
-	{
-		pginstall_repository =
-			GetConfigOptionByName("pginstall.repository", NULL);
-	}
-	PG_CATCH();
-	{
-		DefineCustomStringVariable("pginstall.repository",
-								   "Extension Repository URL",
-								   "",
-								   &pginstall_repository,
-								   "",
-								   PGC_SUSET,
-								   GUC_NOT_IN_SAMPLE,
-								   NULL,
-								   NULL,
-								   NULL);
-		EmitWarningsOnPlaceholders("pginstall.repository");
-	}
-	PG_END_TRY();
+	DefineCustomStringVariable("pginstall.repository",
+							   "Extension Repository URL",
+							   "",
+							   &pginstall_repository,
+							   "",
+							   PGC_SUSET,
+							   GUC_NOT_IN_SAMPLE,
+							   NULL,
+							   NULL,
+							   NULL);
 
-	/* Template path, contains subdirectories. */
-	PG_TRY();
-	{
-		pginstall_custom_path =
-			GetConfigOptionByName("pginstall.custom_path", NULL);
-	}
-	PG_CATCH();
-	{
-		DefineCustomStringVariable("pginstall.custom_path",
-								   "Directory where to load custom scripts from",
-								   "",
-								   &pginstall_custom_path,
-								   "",
-								   PGC_SUSET,
-								   GUC_NOT_IN_SAMPLE,
-								   NULL,
-								   NULL,
-								   NULL);
-		EmitWarningsOnPlaceholders("pginstall.custom_path");
-	}
-	PG_END_TRY();
+	DefineCustomStringVariable("pginstall.custom_path",
+							   "Directory where to load custom scripts from",
+							   "",
+							   &pginstall_custom_path,
+							   "",
+							   PGC_SUSET,
+							   GUC_NOT_IN_SAMPLE,
+							   NULL,
+							   NULL,
+							   NULL);
 
-	/* Extension whitelisting */
-	PG_TRY();
-	{
-		pginstall_whitelist = GetConfigOptionByName("pginstall.whitelist", NULL);
-	}
-	PG_CATCH();
-	{
-		DefineCustomStringVariable("pginstall.whitelist",
-								   "List of extensions that are whitelisted",
-								   "Separated by comma",
-								   &pginstall_whitelist,
-								   "",
-								   PGC_SUSET,
-								   GUC_NOT_IN_SAMPLE,
-								   NULL,
-								   NULL,
-								   NULL);
-		EmitWarningsOnPlaceholders("pginstall.whitelist");
-	}
-	PG_END_TRY();
+	DefineCustomStringVariable("pginstall.whitelist",
+							   "List of extensions that are whitelisted",
+							   "Separated by comma",
+							   &pginstall_whitelist,
+							   "",
+							   PGC_SUSET,
+							   GUC_NOT_IN_SAMPLE,
+							   NULL,
+							   NULL,
+							   NULL);
 
-	/* Do we handle superuser privileges by implementing sudo? */
-	PG_TRY();
-	{
-		parse_bool(GetConfigOptionByName("pginstall.sudo", NULL),
-				   &pginstall_sudo);
-	}
-	PG_CATCH();
-	{
-		DefineCustomBoolVariable("pginstall.sudo",
-								 "Allow privilege escalation to install extensions",
-								 "",
-								 &pginstall_sudo,
-								 false,
-								 PGC_SUSET,
-								 GUC_NOT_IN_SAMPLE,
-								 NULL,
-								 NULL,
-								 NULL);
-		EmitWarningsOnPlaceholders("pginstall.custom_path");
-	}
-	PG_END_TRY();
+	DefineCustomBoolVariable("pginstall.sudo",
+							 "Allow privilege escalation to install extensions",
+							 "",
+							 &pginstall_sudo,
+							 false,
+							 PGC_SUSET,
+							 GUC_NOT_IN_SAMPLE,
+							 NULL,
+							 NULL,
+							 NULL);
 
 	prev_ProcessUtility = ProcessUtility_hook;
 	ProcessUtility_hook = pginstall_ProcessUtility;
