@@ -1,0 +1,4 @@
+src/client/.deps
+src/client/*.o
+src/client/*.so
+src/client/*.dSym
