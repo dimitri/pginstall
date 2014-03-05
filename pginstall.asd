@@ -48,12 +48,6 @@
                          (:file "dao" :depends-on ("package"))
                          (:file "api" :depends-on ("package" "dao"))
 			 (:file "setup" :depends-on ("package" "dao"))))
-               (:module server
-                        :depends-on ("common" "config" "repo")
-			:components
-			((:file "package")
-                         (:file "json" :depends-on ("package"))
-			 (:file "server" :depends-on ("package" "json"))))
                (:module animal
                         :depends-on ("common" "repo")
                         :components
@@ -62,5 +56,11 @@
                          (:file "archive" :depends-on ("package"))
                          (:file "build"  :depends-on ("package"
                                                       "archive"
-                                                      "animal"))))))))
+                                                      "animal"))))
+               (:module server
+                        :depends-on ("common" "config" "repo" "animal")
+			:components
+			((:file "package")
+                         (:file "json" :depends-on ("package"))
+			 (:file "server" :depends-on ("package" "json"))))))))
 
