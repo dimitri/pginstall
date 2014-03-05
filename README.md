@@ -120,34 +120,14 @@ the extension *full name* of his or her choice.
 
 ## The Extension Archive Format
 
-The Archive contains the files built by the *PGXS* install command `make
-install`, plus a `pginstall` specific *Manifest* file, in the following
-format:
+An Extension Archive is a very simple `.tar.gz` file containing the main
+extension control at its root location and a directory named after the
+extension short name. The directory containst the library, scripts and
+auxilliary control files.
 
-    # Manifest file for pginstall
-    control:  path/to/extension.control         # main control always first
-              path/to/extension--1.1.control    # auxilliary control files
-    module:   path/to/extension.so
-              path/to/dependency.so             # needs serious checking
-    scripts:  path/to/extension--1.0.sql
-              path/to/extension--1.0--1.1.sql
-    docs:     path/to/README.extension.txt
-
-See the *Build System* section for details about the relative *path* to be
-found in the *Manifest*.
-
-The specific archive format is morally equivalent to a *tarball*, which
-format exactly is in use is part of the HTTP header, using one of the
-following *content-type* values:
-
-  - `application/zip`
-  - `application/gzip`
-  - `application/x-tar`
-  - `application/x-rar-compressed`
-
-Other types are accepted, provided that they are automatically handled by
-the [libarchive](http://www.libarchive.org/), and are expected to be
-received under the `application/octet-stream` *content-type*.
+The directory is *relocatable* in as so much as the pginstall client will
+tweak the control file parameters *directory* and *module_pathname* at
+`CREATE EXTENSION` time.
 
 ## The `pginstall` Repository Server
 
