@@ -11,9 +11,12 @@
 #ifndef __PGINSTALL_ARCHIVE_H__
 #define __PGINSTALL_ARCHIVE_H__
 
+#include "platform.h"
+
 #include <archive.h>
 #include <archive_entry.h>
 
+void maybe_unpack_archive(const char *extname);
 void extract(const char *extname, const char *filename);
 
 #endif

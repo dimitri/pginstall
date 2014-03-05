@@ -48,6 +48,24 @@
 #include "utils/syscache.h"
 
 /*
+ * This function isn't exported from PostgreSQL source code, can be found in
+ * src/backend/commands/extension.c
+ */
+char *
+get_extension_control_filename(const char *extname)
+{
+	char		sharepath[MAXPGPATH];
+	char	   *result;
+
+	get_share_path(my_exec_path, sharepath);
+	result = (char *) palloc(MAXPGPATH);
+	snprintf(result, MAXPGPATH, "%s/extension/%s.control",
+			 sharepath, extname);
+
+	return result;
+}
+
+/*
  * Parse contents of primary or auxiliary control file, and fill in
  * fields of *control.	We parse primary file if version == NULL,
  * else the optional auxiliary file for that version.
@@ -61,19 +79,11 @@ parse_default_version_in_control_file(const char *extname,
 									  char **version,
 									  char **schema)
 {
-	char		sharepath[MAXPGPATH];
-	char	   *filename;
+	char	   *filename = get_extension_control_filename(extname);
 	FILE	   *file;
 	ConfigVariable *item,
 		*head = NULL,
 		*tail = NULL;
-
-	/*
-	 * Locate the file to read.
-	 */
-	get_share_path(my_exec_path, sharepath);
-	filename = (char *) palloc(MAXPGPATH);
-	snprintf(filename, MAXPGPATH, "%s/extension/%s.control", sharepath, extname);
 
 	if ((file = AllocateFile(filename, "r")) == NULL)
 	{
@@ -111,6 +121,99 @@ parse_default_version_in_control_file(const char *extname,
 	FreeConfigVariables(head);
 
 	pfree(filename);
+}
+
+/*
+ * When unpacking an extension archive, we need to rewrite the control file to
+ * adjust those two parameters:
+ *
+ *  - directory = '${pginstall_extension_dir}/${extname}'
+ *  - module_pathname = '${pginstall_extension_dir}/${extname}/${extname}'
+ */
+void
+rewrite_control_file(const char *extname, const char *control_filename)
+{
+	char *temp_control_filename = psprintf("%s.new", control_filename);
+	FILE	   *file;
+	ConfigVariable *item,
+		*head = NULL,
+		*tail = NULL;
+	bool directory = false;
+
+	if ((file = AllocateFile(control_filename, "r")) == NULL)
+	{
+        /* we still need to handle the following error here */
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not open extension control file \"%s\": %m",
+						control_filename)));
+	}
+
+	/*
+	 * Parse the file content, using GUC's file parsing code.  We need not
+	 * check the return value since any errors will be thrown at ERROR level.
+	 */
+	(void) ParseConfigFp(file, control_filename, 0, ERROR, &head, &tail);
+
+	FreeFile(file);
+
+	/*
+	 * Now open the new file where to write the new control properties.
+	 */
+	if ((file = AllocateFile(temp_control_filename, "w")) == NULL)
+	{
+        /* we still need to handle the following error here */
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not open extension control file \"%s\": %m",
+						temp_control_filename)));
+	}
+
+	/*
+	 * Convert the ConfigVariable list into ExtensionControlFile entries, we
+	 * are only interested into the default version.
+	 */
+	for (item = head; item != NULL; item = item->next)
+	{
+		if (strcmp(item->name, "directory") == 0)
+		{
+			fprintf(file,
+					"directory = '%s/%s'\n",
+					pginstall_extension_dir, extname);
+
+			directory = true;
+		}
+		else if (strcmp(item->name, "module_pathname") == 0)
+		{
+			fprintf(file,
+					"module_pathname = '%s/%s/%s'\n",
+					pginstall_extension_dir, extname, extname);
+		}
+		else
+		{
+			fprintf(file, "%s = '%s'\n", item->name, item->value);
+		}
+	}
+
+	/* Force writing the directory property */
+	if (!directory)
+	{
+		fprintf(file,
+				"directory = '%s/%s'\n",
+				pginstall_extension_dir, extname);
+	}
+
+	FreeConfigVariables(head);
+	FreeFile(file);
+
+	/* And now rename the temp file to its final name */
+	if (rename(temp_control_filename, control_filename) != 0)
+	{
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not rename file \"%s\" to \"%s\": %m",
+						temp_control_filename, control_filename)));
+	}
 }
 
 /*

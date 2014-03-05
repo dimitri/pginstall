@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include "postgres.h"
 
+#include "archive.h"
 #include "pginstall.h"
 #include "platform.h"
 #include "utils.h"
@@ -288,21 +289,6 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
 	char    *schema = NULL;
 	char    *old_version = NULL;
 	char    *new_version = NULL;
-	PlatformData platform;
-
-	/* First see if we need to download an archive for asked extension */
-	current_platform(&platform);
-
-	elog(NOTICE, "Current Platform: %s--%s--%s",
-		 platform.os_name, platform.os_version, platform.arch);
-	return;
-
-	/* Don't try to make life hard for our friendly superusers. */
-	if (superuser())
-	{
-		call_RawProcessUtility(PROCESS_UTILITY_ARGS);
-		return;
-	}
 
 	switch (nodeTag(parsetree))
 	{
@@ -310,9 +296,19 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
 		{
 			CreateExtensionStmt *stmt = (CreateExtensionStmt *)parsetree;
 			name = stmt->extname;
+
+			/* See if we need to download an archive for asked extension */
+			maybe_unpack_archive(name);
+
+			/* the Extension should be available now.  */
 			fill_in_extension_properties(name, stmt->options,
 										 &schema, &old_version, &new_version);
 
+			if (superuser())
+			{
+				call_RawProcessUtility(PROCESS_UTILITY_ARGS);
+				return;
+			}
 			if (extension_is_whitelisted(name))
 			{
 				call_ProcessUtility(PROCESS_UTILITY_ARGS,

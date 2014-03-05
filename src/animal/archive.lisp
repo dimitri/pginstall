@@ -19,22 +19,25 @@
 (defun $libdir-to-module-pathname (source target)
   "Parse given SCRIPT and replace strings \"AS '$libdir/...'\" to \"AS
    'MODULE_PATHNAME/...'\"."
-  (let ((content (iolib.base:read-file-into-string source)))
+  (let ((content (read-file-into-string source)))
     (with-open-file (newscript target
                                :direction :output
                                :if-exists :supersede
-                               :if-does-not-exist :error
+                               :if-does-not-exist :create
                                :external-format :utf-8)
-      (write-string (cl-ppcre:regex-replace-all "([$]libdir/)"
+      (write-string (cl-ppcre:regex-replace-all "AS '[^']+'"
                                                 content
-                                                "MODULE_PATHNAME/")
+                                                "AS 'MODULE_PATHNAME'")
                     newscript)))
   target)
 
 ;;;
 ;;; Even lower-level tooling, files and directories.
 ;;;
-(defun copy-files-into (directory files &optional (base-dir directory))
+(defun copy-files-into (directory files
+                        &key
+                          (base-dir directory)
+                          rewrite-$libdir)
   "Copy FILES into DIRECTORY and return the list of files copied."
   (loop for file-path in files
      for target = (file-path-namestring
@@ -42,7 +45,9 @@
                     (file-path-namestring (file-path-file file-path))
                     directory))
      for source = (file-path-namestring file-path)
-     do (iolib.base:copy-file source target)
+     do (if rewrite-$libdir
+            ($libdir-to-module-pathname source target)
+            (iolib.base:copy-file source target))
      collect (enough-namestring target base-dir)))
 
 (defun archive-extdir (extension archive-dir)
@@ -52,11 +57,11 @@
    (make-pathname :directory `(:relative ,(short-name extension))) archive-dir))
 
 (defun make-archive-dir (extension basename)
-  "Ensure *build-root*/BASENAME exists, removing a possibly existing old copy."
+  "Ensure *archive-path*/BASENAME exists, removing a possibly existing old copy."
   (declare (type extension extension))
   (let ((archive-dir
          (merge-pathnames
-          (make-pathname :directory `(:relative ,basename)) *build-root*)))
+          (make-pathname :directory `(:relative ,basename)) *archive-path*)))
 
     ;; first, cleanup
     (when (probe-file archive-dir)
@@ -138,29 +143,16 @@
 
     ;; put file at their right place for the archive
     (let ((ctrl      (copy-files-into archive-dir control-files))
-          (libs      (copy-files-into archive-extdir module-files archive-dir))
-          (scripts   (copy-files-into archive-extdir script-files archive-dir))
-          (docs      (copy-files-into archive-extdir doc-files    archive-dir))
-          ;; normalize the filename
-          (manifest
-           (file-path-namestring
-            (parse-file-path
-             (namestring
-              (make-pathname :directory (directory-namestring archive-dir)
-                             :name "MANIFEST"
-                             :type "TXT"))))))
-      ;; and prepare the MANIFEST.TXT file
-      (iolib.base:with-output-to-file (stream manifest
-                                              :if-exists :supersede
-                                              :external-format :utf-8)
-        (format stream "~&control: ~{~a~^~&~9T~}" ctrl)
-        (format stream "~&module:  ~{~a~^~&~9T~}" libs)
-        (format stream "~&scripts: ~{~a~^~&~9T~}" scripts)
-        (format stream "~&docs:    ~{~a~^~&~9T~}" docs))
+          (libs      (copy-files-into archive-extdir module-files
+                                      :base-dir archive-dir))
+          (scripts   (copy-files-into archive-extdir script-files
+                                      :base-dir archive-dir
+                                      :rewrite-$libdir t))
+          (docs      (copy-files-into archive-extdir doc-files
+                                      :base-dir archive-dir)))
 
       ;; and return the filelist
-      (append (list (enough-namestring manifest archive-dir))
-              ctrl libs scripts docs))))
+      (append ctrl libs scripts docs))))
 
 (defun pack-archive (extension version &key docdir pkglibdir sharedir)
   "Pack an archive for given EXTENSION and PostgreSQL version."
@@ -173,17 +165,15 @@
                                                   pkglibdir
                                                   sharedir))
          (platform         (make-instance 'platform))
-         (ext-version      (parse-default-version
-                            (merge-pathnames (second filelist) archive-dir)))
          (archive-name     (format nil "~a--~a--~a--~a--~a"
                                    (short-name extension)
-                                   ext-version
                                    version
                                    (substitute #\_ #\Space (os-name platform))
-                                   (os-version platform)))
+                                   (os-version platform)
+                                   (arch platform)))
          (archive-filename (merge-pathnames (make-pathname :name archive-name
                                                            :type "tar")
-                                            *build-root*)))
+                                            *archive-path*)))
 
     ;; build the archive, it's all ready
     (let ((*default-pathname-defaults*

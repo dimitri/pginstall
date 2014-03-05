@@ -9,7 +9,9 @@
  */
 
 #include "archive.h"
+#include "platform.h"
 #include "pginstall.h"
+#include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +19,46 @@
 #include "postgres.h"
 
 static int copy_data(struct archive *ar, struct archive *aw);
+
+/*
+ * At CREATE EXTENSION time we check if the extension is already available,
+ * which is driven by the presence of its control file on disk.
+ *
+ * If the extension is not already available, we ask the repository server for
+ * it, and unpack received binary archive to the right place.
+ *
+ * TODO: actually talk to the repository server. Current prototype version
+ * directly uses the local archive cache.
+ */
+void
+maybe_unpack_archive(const char *extname)
+{
+	PlatformData platform;
+	char *control_filename = get_extension_control_filename(extname);
+	char *archive_filename;
+
+	current_platform(&platform);
+
+	if (access(control_filename, F_OK) == 0)
+		return;
+
+	archive_filename = psprintf("%s/%s--%s--%s--%s--%s.tar.gz",
+								pginstall_archive_dir,
+								extname,
+								PG_VERSION,
+								platform.os_name,
+								platform.os_version,
+								platform.arch);
+
+	if (access(archive_filename, R_OK) == 0)
+	{
+		extract(extname, archive_filename);
+
+		/* now rewrite the control file to "relocate" the extension */
+		rewrite_control_file(extname, control_filename);
+	}
+	return;
+}
 
 /*
  * Given a filename read within an extension archive, compute where to extract
@@ -29,15 +71,12 @@ static int copy_data(struct archive *ar, struct archive *aw);
  * pginstall_extension_dir/extname/<path>.
  */
 static char *
-compute_target_path(const char *extname, const char *filename)
+compute_target_path(const char *filename,
+					const char *control_filename,
+					int control_filename_len)
 {
-	char control_filename[MAXPGPATH];
-	int len =
-		snprintf(control_filename, MAXPGPATH, "%s/%s.control", extname, extname);
-
-	if (strncmp(filename, control_filename, len) == 0)
+	if (strncmp(filename, control_filename, control_filename_len) == 0)
 		return psprintf("%s/%s", pginstall_control_dir, filename);
-
 	else
 		return psprintf("%s/%s", pginstall_extension_dir, filename);
 }
@@ -55,11 +94,20 @@ extract(const char *extname, const char *filename)
 	int flags = ARCHIVE_EXTRACT_TIME;
 	int r;
 
+	char *control_filename = psprintf("%s.control", extname);
+	int cflen = strlen(control_filename);
+
 	a = archive_read_new();
 	ext = archive_write_disk_new();
 	archive_write_disk_set_options(ext, flags);
 
+	/*
+	 * Do we care enough about the .so size to limit ourselves here? We might
+	 * want to reconsider and use archive_read_support_format_all() and
+	 * archive_read_support_filter_all() rather than just tar.gz.
+	 */
 	archive_read_support_format_tar(a);
+	archive_read_support_filter_gzip(a);
 
 	if ((archive_read_open_filename(a, filename, 10240)))
 		ereport(ERROR,
@@ -67,8 +115,11 @@ extract(const char *extname, const char *filename)
 				 errmsg("Failed to open archive \"%s\"", filename),
 				 errdetail("%s", archive_error_string(a))));
 
+	elog(DEBUG1, "Unpacking archive \"%s\"", filename);
+
 	for (;;)
 	{
+		char *path;
 		struct archive_entry *target;
 
 		r = archive_read_next_header(a, &entry);
@@ -81,10 +132,14 @@ extract(const char *extname, const char *filename)
 					 errmsg("%s", archive_error_string(a))));
 
 		target = archive_entry_clone(entry);
-		archive_entry_set_pathname(target,
-								   compute_target_path(extname, filename));
+		path   = archive_entry_pathname(target);
+		path   = compute_target_path(path, control_filename, cflen);
+		archive_entry_set_pathname(target, path);
 
-		r = archive_write_header(ext, entry);
+		elog(DEBUG1, "Extracting \"%s\" to \"%s\"",
+			 archive_entry_pathname(entry), path);
+
+		r = archive_write_header(ext, target);
 
 		if (r != ARCHIVE_OK)
 			ereport(WARNING,

@@ -15,6 +15,10 @@
 
 #define MAXPGPATH 1024
 
+char *get_extension_control_filename(const char *extname);
+
+void rewrite_control_file(const char *extname, const char *control_filename);
+
 char *get_specific_custom_script_filename(const char *name,
 										  const char *when,
 										  const char *from_version,
