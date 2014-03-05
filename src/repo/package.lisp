@@ -37,4 +37,8 @@
            #:pg-configure
            #:pg-cc
            #:pg-cflags
-           #:list-pg-config-in-path))
+           #:list-pg-config-in-path
+
+           ;; Now, the API
+           #:select-star
+           ))

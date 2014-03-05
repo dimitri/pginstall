@@ -11,4 +11,5 @@
         #:iolib.os
         #:iolib.pathnames)
   (:import-from #:iolib.base
-                #:read-file-into-string))
+                #:read-file-into-string)
+  (:export #:list-pg-configs))

@@ -35,7 +35,7 @@
 (defmethod print-object ((extension extension) stream)
   (print-unreadable-object (extension stream :type t :identity t)
     (let ((id (when (slot-boundp extension 'id)
-                (ext-id 'id))))
+                (ext-id extension))))
       (with-slots (shortname fullname) extension
         (format stream "~d ~a [~a]" id shortname fullname)))))
 

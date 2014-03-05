@@ -83,7 +83,8 @@ separate PostgreSQL extension.
     pginstall animal pg rm /path/to/pg_config
 
     pginstall animal ls
-    pginstall animal build extname /path/to/pg_config
+    pginstall build extname [ /path/to/pg_config ]
+    pginstall upload extname
         
     pginstall repo ls
     pginstall repo add extension-full-name uri description
@@ -94,6 +95,15 @@ separate PostgreSQL extension.
 
     pginstall repo update extname
     pginstall repo update-world
+    
+Alternative idea:
+
+    pginstall ls extensions
+    pginstall ls animals
+    pginstall ls pg [ animal ]
+    pginstall build extname
+    pginstall queue extname
+
 
 Where `extension-full-name` is expected to be an *Extension Full Name* as
 described below, and `extname` is an *Extension Name*, which is either an

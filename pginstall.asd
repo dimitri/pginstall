@@ -18,9 +18,16 @@
                  #:alexandria           ; Some utilities
                  #:archive              ; produce an extension archive file
                  #:split-sequence       ; split sequences
+                 #:hunchentoot          ; http server
+                 #:yason                ; JSON routines
+                 #:closer-mop           ; introspection
 		 )
     :components
-    ((:module "src"
+    ((:module "lib"
+              :components
+              ((:file "simple-routes")))
+     (:module "src"
+              :depends-on ("lib")
 	      :components
               ((:module common
 			:components
@@ -39,7 +46,14 @@
 			:components
 			((:file "package")
                          (:file "dao" :depends-on ("package"))
+                         (:file "api" :depends-on ("package" "dao"))
 			 (:file "setup" :depends-on ("package" "dao"))))
+               (:module server
+                        :depends-on ("common" "config" "repo")
+			:components
+			((:file "package")
+                         (:file "json" :depends-on ("package"))
+			 (:file "server" :depends-on ("package" "json"))))
                (:module animal
                         :depends-on ("common" "repo")
                         :components

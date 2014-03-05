@@ -10,5 +10,6 @@
 
            #:*pg-config-keys*
            #:run-pg-config
+           #:uname
            #:os-name-and-version
            #:parse-properties-output))
