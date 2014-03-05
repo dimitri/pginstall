@@ -11,7 +11,7 @@
 ;;;
 ;;; TODO: Implement:
 ;;;
-;;;   (defun register-animal (name server-uri animal-uri))
+;;;   (defun register-animal (name server-uri))
 ;;;   (defun add-pg-config (pg-config-path))
 ;;;   (defun rm-pg-config (pg-config-path))
 ;;;   (defun list-animals ())

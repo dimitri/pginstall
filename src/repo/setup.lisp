@@ -53,7 +53,7 @@
      (loop for extension in *default-extension-list*
         do (apply #'make-dao 'extension extension))
 
-     (let* ((animal (make-dao 'animal :name *animal-name* :uri *animal-uri*)))
+     (let* ((animal (make-dao 'animal :name *animal-name*)))
        (loop :for pgconfig :in (list-pg-config-in-path)
           :collect (make-dao 'pgconfig
                              :animal-name *animal-name*

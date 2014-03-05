@@ -13,11 +13,11 @@
            #:*listen-port*
 
            ;; repository server
+           #:*repo-server*
            #:*archive-path*
 
            ;; build animal
            #:*animal-name*
-           #:*animal-uri*
            #:*git*
            #:*gmake*
            #:*build-root*

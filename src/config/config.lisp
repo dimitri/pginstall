@@ -31,9 +31,6 @@
 (defparameter *animal-name* "bat"
   "Name of the animal that runs on this local instance.")
 
-(defparameter *animal-uri* "http://localhost:8042/"
-  "HTTP URI of the animal, as seen from the repository server.")
-
 
 ;;;
 ;;; Defaults, organized in sections, with proper use facing option names
@@ -43,10 +40,10 @@
      ("dburi"        *dburi*        validate-dburi)
      ("listen-port"  *listen-port*  parse-integer))
     ("repo"
+     ("uri"          *repo-server*  check-uri)
      ("archive-path" *archive-path* check-and-make-directory))
     ("animal"
      ("name"         *animal-name*  identity)
-     ("uri"          *animal-uri*   check-uri)
      ("build-root"   *build-root*   check-and-make-directory)
      ("gmake"        *gmake*        check-executable)
      ("git"          *git*          check-executable)

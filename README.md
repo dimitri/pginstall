@@ -63,16 +63,16 @@ separate PostgreSQL extension.
 
     pginstall config dburi postgresql://host:port/dbname    
     pginstall config listen-port 8042
-    pginstall config server-uri http://pginstall.mydomain.tld/
+    pginstall config server-uri http://pginstall.mydomain.tld:8042/
     pginstall config archive-path /var/cache/pginstall
-    pginstall config auth
     
-    pginstall server start
-    pginstall server stop
-    pginstall server status
+    pginstall start
+    pginstall stop
+    pginstall status
+    pginstall reload
+    pginstall restart
 
     pginstall config animal-name bat
-    pginstall config animal-uri http://localhost:8042/
     pginstall config build-root /tmp/pginstall
     pginstall config gmake /path/to/gmake
 

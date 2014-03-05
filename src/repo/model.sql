@@ -26,7 +26,6 @@ create table platform (
 create table animal (
   id       serial primary key,
   name     text unique,
-  uri      text,
   platform integer references platform(id)  
 );
 

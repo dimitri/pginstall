@@ -71,7 +71,6 @@
 (defclass animal ()
     ((id       :col-type integer   :reader animal-id)
      (name     :col-type string  :accessor name     :initarg :name)
-     (uri      :col-type string  :accessor uri      :initarg :uri )
      (platform :col-type integer :reader platform))
   (:documentation "a Build Animal, its job is to build extensions.")
   (:metaclass dao-class)
@@ -96,8 +95,8 @@
   (print-unreadable-object (animal stream :type t :identity t)
     (let ((id (when (slot-boundp animal 'id)
                 (animal-id animal))))
-      (with-slots (name uri) animal
-        (format stream "~a ~a [~a]" id name uri)))))
+      (with-slots (name) animal
+        (format stream "~a ~a" id name)))))
 
 
 ;;;
