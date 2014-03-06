@@ -17,15 +17,17 @@
        (:GET  "/" 'home)
 
        ;; Extension API
-       (:GET  "/api/list/extensions"                  'api-list-extensions)
+       (:GET  "/api/list/extension"                  'api-list-extension)
        (:GET  "/api/get/extension/:os/:version/:arch" 'api-get-extension)
 
        ;; Buildfarm animal API
-       (:GET  "/api/list/plafforms"   'api-list-platforms)
-       (:GET  "/api/list/animals"     'api-list-animals)
-       (:GET  "/api/list/pg"          'api-list-pg)
+       (:GET  "/api/list/plafform"   'api-list-platform)
+       (:GET  "/api/list/animal"     'api-list-animal)
+       (:GET  "/api/list/pgconfig"   'api-list-pgconfig)
 
-       (:GET  "/api/register/:animal" 'api-register-animal)
+       (:GET  "/api/get/pgconfig/:animal" 'api-get-pgconfig)
+
+       (:GET  "/api/register/animal/:name/:os/:version/:arch" 'api-register-animal)
        (:GET  "/api/build/:extension" 'api-build-extension)))
 
 (defvar *acceptor* nil "The Web Server")
@@ -35,7 +37,7 @@
   (when *acceptor*
     (error "The web server is already running."))
 
-  (setf *acceptor* (make-instance simpleroutes-acceptor
+  (setf *acceptor* (make-instance 'simpleroutes-acceptor
                                   :port *listen-port*
                                   :document-root *archive-path*
                                   :access-log-destination *terminal-io*
@@ -59,22 +61,33 @@
 ;;;
 ;;; Main entry points for the web server.
 ;;;
-(defun api-list-extensions ()
-  "Return a JSON list of extensions."
-  ;; (setf (hunchentoot:content-type*) "text/plain")
-  (yason:encode (select-star 'extension)))
+(defun home ()
+  "Hello, world?")
 
-(defun list-platforms ()
-  "Return a JSON formated list of platforms."
-  ;; (setf (hunchentoot:content-type*) "text/plain")
-  (yason:encode (select-star 'platform)))
+(defmacro define-api-list (class-name)
+  "Define a function that outputs a listing of instances of CLASS-NAME."
+  (declare (type symbol class-name))
+  (let ((fun-name (intern (format nil "API-LIST-~a" class-name))))
+    `(defun ,fun-name ()
+       (setf (hunchentoot:content-type*) "text/plain")
+       (with-output-to-string (*standard-output*)
+         (yason:encode (select-star ',class-name))))))
 
-(defun list-animals ()
-  "Return a JSON formated list of platforms."
-  ;; (setf (hunchentoot:content-type*) "text/plain")
-  (yason:encode (select-star 'animal)))
+;; enable all our straight-to-json API
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (define-api-list extension)
+  (define-api-list platform)
+  (define-api-list animal)
+  (define-api-list pgconfig))
 
-(defun list-pgconfigs (animal-name)
-  "Return a JSON formated list of platforms."
-  ;; (setf (hunchentoot:content-type*) "text/plain")
-  (yason:encode (list-pg-configs :animal-name animal-name)))
+(defun api-get-pgconfig (animal-name)
+  "Get the list of pgconfig known to given ANIMAL-NAME."
+  (setf (hunchentoot:content-type*) "text/plain")
+  (with-output-to-string (*standard-output*)
+    (yason:encode (list-pg-configs :animal-name animal-name))))
+
+(defun api-register-animal (name os version arch)
+  "Register a new animal, with details about its platform."
+  (setf (hunchentoot:content-type*) "text/plain")
+  (with-output-to-string (*standard-output*)
+    (yason:encode (register-animal name os version arch))))

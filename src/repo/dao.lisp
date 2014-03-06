@@ -42,9 +42,12 @@
 
 (defclass platform ()
     ((id          :col-type integer  :reader platform-id)
-     (os-name     :col-type string :col-name os_name    :reader os-name)
-     (os-version  :col-type string :col-name os_version :reader os-version)
-     (arch        :col-type string :reader arch))
+     (os-name     :col-type string :col-name os_name
+                  :initarg :os-name :reader os-name)
+     (os-version  :col-type string :col-name os_version
+                  :initarg :os-version :reader os-version)
+     (arch        :col-type string :reader arch
+                  :initarg :arch :reader arch))
   (:documentation
    "the Platform an animal is running.")
   (:metaclass dao-class)
@@ -52,10 +55,11 @@
 
 (defmethod initialize-instance :after ((platform platform) &key)
   "Automatically compute os-name, os-version and arch."
-  (destructuring-bind (os-name os-version) (os-name-and-version)
-    (setf (slot-value platform 'os-name)    os-name
-          (slot-value platform 'os-version) os-version
-          (slot-value platform 'arch)       (uname "-m"))))
+  (unless (slot-boundp platform 'os-name)
+    (destructuring-bind (os-name os-version) (os-name-and-version)
+      (setf (slot-value platform 'os-name)    os-name
+            (slot-value platform 'os-version) os-version
+            (slot-value platform 'arch)       (uname "-m")))))
 
 (defmethod print-object ((platform platform) stream)
   (print-unreadable-object (platform stream :type t :identity t)
