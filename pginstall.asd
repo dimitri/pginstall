@@ -56,7 +56,10 @@
                          (:file "archive" :depends-on ("package"))
                          (:file "build"  :depends-on ("package"
                                                       "archive"
-                                                      "animal"))))
+                                                      "animal"))
+                         (:file "client" :depends-on ("package"
+                                                      "build"
+                                                      "archive"))))
                (:module server
                         :depends-on ("common" "config" "repo" "animal")
 			:components

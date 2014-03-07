@@ -8,17 +8,6 @@
 
 (in-package #:pginstall.animal)
 
-;;;
-;;; TODO: Implement:
-;;;
-;;;   (defun register-animal (name server-uri))
-;;;   (defun add-pg-config (pg-config-path))
-;;;   (defun rm-pg-config (pg-config-path))
-;;;   (defun list-animals ())
-;;;   (defun list-pg-configs ())
-;;;   (defun build-extension (name &rest pg-config))
-;;;
-
 (defun register-animal (name os version arch)
   "Register a new animal, with its plaftorm details."
   ;; conflict avoidance and resolution?

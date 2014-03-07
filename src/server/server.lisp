@@ -78,9 +78,15 @@
    data in text-plain"
   (declare (list args))
   `(defun ,fun ,args
-     (setf (hunchentoot:content-type*) "text/plain")
      (with-output-to-string (*standard-output*)
-       (yason:encode ,@body))))
+       (handler-case
+           (let ((result (yason:encode ,@body)))
+             (setf (hunchentoot:content-type*) "text/plain")
+             result)
+         (condition (c)
+           (setf (hunchentoot:return-code*)
+                 hunchentoot:+http-internal-server-error+)
+           (format t "~a" c))))))
 
 (defmacro define-api-list (class-name)
   "Define a function that outputs a listing of instances of CLASS-NAME."

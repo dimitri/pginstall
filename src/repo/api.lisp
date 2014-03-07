@@ -35,21 +35,26 @@
 (defun queue-get-work (animal-name)
   "Return an Extension object from the build queue"
   (with-pgsql-connection (*dburi*)
-    (query-dao 'running
-               "insert into running(extension, animal)
-                     select q.extension, a.id
-                       from queue q
-                              CROSS JOIN
-                           (platform p join animal a on a.platform = p.id)
-                      where a.name = $1
-                     except
-                     select r.extension, a.id
-                       from running r
-                            join animal a on r.animal = a.id
-                      where a.name = $1
-                      limit 1
-                  returning running.*"
-           animal-name)))
+    (car (query-dao 'extension
+                    "with running as (
+                       insert into running(extension, animal)
+                            select q.extension, a.id
+                              from queue q
+                                     CROSS JOIN
+                                  (platform p join animal a on a.platform = p.id)
+                             where a.name = $1
+                            except
+                            select r.extension, a.id
+                              from running r
+                                   join animal a on r.animal = a.id
+                             where a.name = $1
+                             limit 1
+                         returning running.*
+                     )
+                     select e.*
+                       from extension e
+                            join running on e.id = running.extension"
+                animal-name))))
 
 (defun select-extensions-available-on-platform (os version arch)
   "Return the list of available extensions on a given platform."
