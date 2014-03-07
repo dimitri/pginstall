@@ -39,3 +39,39 @@ create table pgconfig (
   cflags     text, -- output of pg_config --cflags
   unique(animal, pg_config)
 );
+
+--
+-- build jobs, a kind of queue
+--
+create table queue (
+  id        serial primary key,
+  extension integer references extension(id) unique
+);
+
+create table running (
+  id        serial primary key,
+  extension integer references extension(id),
+  animal    integer references animal(id),
+  started   timestamptz default now(),
+  unique(extension, animal)
+);
+    
+create table buildlog (
+  id         serial primary key,
+  extension  integer references extension(id),
+  animal     integer references animal(id),
+  buildstamp timestamptz,
+  log        text
+);
+
+--
+-- Once an extension has been built, register its availability
+--
+create table archive (
+  id        serial primary key,
+  extension integer references extension(id),
+  platform  integer references platform(id),
+  pgversion text,
+  archive   text,
+  unique(extension, platform, pgversion)
+);

@@ -39,6 +39,41 @@
            #:pg-cflags
            #:list-pg-config-in-path
 
+           #:queue                      ; the queue class
+           #:queue-id
+           #:queue-ext-id
+
+           #:running                    ; the running class
+           #:running-id
+           #:running-ext-id
+           #:running-animal-id
+           #:running-started
+
+           #:build-log                  ; the build-log class
+           #:build-log-id
+           #:build-log-ext-id
+           #:build-log-animal-id
+           #:build-log-stamp
+           #:build-log-result
+           #:build-log-log
+
+           #:build-queue                ;the build-queue class
+           #:build-queue-id
+           #:build-queue-ext-id
+           #:build-queue-fullname
+           #:build-queue-uri
+           #:build-queue-desc
+
+           #:archive                    ; the archive class
+           #:archive-id
+           #:archive-ext-id
+           #:archive-platform-id
+           #:archive-pgversion
+           #:archive-filename
+
            ;; Now, the API
            #:select-star
+           #:queue-extension-build
+           #:queue-get-work
+           #:select-extensions-available-on-platform
            ))

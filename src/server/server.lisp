@@ -17,7 +17,7 @@
        (:GET  "/" 'home)
 
        ;; Extension API
-       (:GET  "/api/list/extension"                  'api-list-extension)
+       (:GET  "/api/list/extension"                   'api-list-extension)
        (:GET  "/api/get/extension/:os/:version/:arch" 'api-get-extension)
 
        ;; Buildfarm animal API
@@ -26,9 +26,15 @@
        (:GET  "/api/list/pgconfig"   'api-list-pgconfig)
 
        (:GET  "/api/get/pgconfig/:animal" 'api-get-pgconfig)
+       (:GET  "/api/add/pgconfig/:animal" 'api-add-pgconfig)
 
+       (:GET  "/api/get/work/for/:animal"     'api-get-work)
+       (:POST "/api/upload/:extension/:pgversion/:os/:version/:arch" 'api-upload)
+
+       ;; Repository server API
        (:GET  "/api/register/animal/:name/:os/:version/:arch" 'api-register-animal)
-       (:GET  "/api/build/:extension" 'api-build-extension)))
+       (:GET  "/api/build/:extension" 'api-queue-extension-build)
+       ))
 
 (defvar *acceptor* nil "The Web Server")
 
@@ -64,6 +70,18 @@
 (defun home ()
   "Hello, world?")
 
+;;;
+;;; elisp: (put 'with-prefixed-accessors 'lisp-indent-function 'defun)
+;;;
+(defmacro define-api-function (fun args &body body)
+  "Define the function FUN to return the result of BODY as a json encoded
+   data in text-plain"
+  (declare (list args))
+  `(defun ,fun ,args
+     (setf (hunchentoot:content-type*) "text/plain")
+     (with-output-to-string (*standard-output*)
+       (yason:encode ,@body))))
+
 (defmacro define-api-list (class-name)
   "Define a function that outputs a listing of instances of CLASS-NAME."
   (declare (type symbol class-name))
@@ -80,14 +98,28 @@
   (define-api-list animal)
   (define-api-list pgconfig))
 
-(defun api-get-pgconfig (animal-name)
-  "Get the list of pgconfig known to given ANIMAL-NAME."
-  (setf (hunchentoot:content-type*) "text/plain")
-  (with-output-to-string (*standard-output*)
-    (yason:encode (list-pg-configs :animal-name animal-name))))
+
+;;;
+;;; API entries for Build Animals
+;;;
+(define-api-function api-get-pgconfig (animal-name)
+  (list-pg-configs :animal-name animal-name))
 
-(defun api-register-animal (name os version arch)
-  "Register a new animal, with details about its platform."
-  (setf (hunchentoot:content-type*) "text/plain")
-  (with-output-to-string (*standard-output*)
-    (yason:encode (register-animal name os version arch))))
+(define-api-function api-register-animal (name os version arch)
+  (register-animal name os version arch))
+
+(define-api-function api-get-work (animal)
+  (queue-get-work animal))
+
+;;;
+;;; Repository server API
+;;;
+(define-api-function api-queue-extension-build (extension)
+  (queue-extension-build extension))
+
+;;;
+;;; API entries for the PostgreSQL embedded client
+;;;
+(define-api-function api-get-extension (os version arch)
+  (select-extensions-available-on-platform os version arch))
+

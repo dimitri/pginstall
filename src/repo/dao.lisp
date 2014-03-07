@@ -150,3 +150,103 @@
                 (pgconfig-id pgconfig))))
       (with-slots (animal-name pg-config version) pgconfig
         (format stream "~a ~a: ~a [~a]" id animal-name pg-config version)))))
+
+
+;;;
+;;; Getting the build done
+;;;
+(defclass queue ()
+    ((id        :col-type integer :reader queue-id)
+     (extension :col-type integer :accessor queue-ext-id :initarg :extension))
+  (:documentation "a Build Queue Job Entry.")
+  (:metaclass dao-class)
+  (:keys id))
+
+(defmethod print-object ((queue queue) stream)
+  (print-unreadable-object (queue stream :type t :identity t)
+    (let ((id (when (slot-boundp queue 'id) (queue-id queue))))
+      (with-slots (extension) queue
+        (format stream "~a ~a" id extension)))))
+
+
+(defclass running ()
+    ((id        :col-type integer :reader running-id)
+     (extension :col-type integer :accessor running-ext-id :initarg :extension)
+     (animal    :col-type integer :accessor running-animal-id
+                :initarg :animal)
+     (started   :col-type local-time :accessor running-started
+                :initarg :started))
+  (:documentation "a Build Job Instance while it's running.")
+  (:metaclass dao-class)
+  (:keys id))
+
+(defmethod print-object ((running running) stream)
+  (print-unreadable-object (running stream :type t :identity t)
+    (let ((id (when (slot-boundp running 'id) (running-id running))))
+      (with-slots (extension animal started) running
+        (format stream "~a ~a ~a <~a>" id extension animal started)))))
+
+(defclass build-log ()
+    ((id          :col-type integer :reader build-log-id)
+     (extension   :col-type integer :accessor build-log-ext-id
+                  :initarg :extension)
+     (animal      :col-type integer :accessor build-log-animal-id
+                  :initarg :animal)
+     (build-stamp :col-type local-time      :col-name buildstamp
+                  :accessor build-log-stamp :initarg :build-log-stamp)
+     (result      :col-type integer :accessor build-log-result :initarg :result)
+     (log         :col-type text    :accessor build-log-log :initarg log))
+  (:documentation "a Build Job Log Entry.")
+  (:metaclass dao-class)
+  (:table-name buildlog)
+  (:keys id))
+
+(defmethod print-object ((build-log buildlog) stream)
+  (print-unreadable-object (buildlog stream :type t :identity t)
+    (let ((id (when (slot-boundp buildlog 'id) (build-log-id build-log))))
+      (with-slots (extension animal result when) build-log
+        (format stream "~a ~a ~a [~a] <~a>" id extension animal result when)))))
+
+
+;;;
+;;; Build Queue higher level objects, with JOIN results
+;;;
+(defclass build-queue ()
+    ((id          :col-type integer :reader build-queue-id)
+     (ext-id      :col-type integer :reader build-queue-ext-id)
+     (fullname    :col-type string  :reader build-queue-ext-full-name)
+     (uri         :col-type string  :reader build-queue-ext-uri)
+     (description :col-type string  :reader build-queue-ext-desc))
+  (:documentation "a Build Queue Job Entry.")
+  (:metaclass dao-class)
+  (:keys id))
+
+(defmethod print-object ((build-queue build-queue) stream)
+  (print-unreadable-object (build-queue stream :type t :identity t)
+    (let ((id (when (slot-boundp build-queue 'id)
+                (build-queue-id build-queue))))
+      (with-slots (ext-id fullname) build-queue
+        (format stream "~a ~a ~a" id ext-id fullname)))))
+
+
+;;;
+;;; The build animals upload "archives" of extensions for a specific platform
+;;;
+(defclass archive ()
+    ((id        :col-type integer :reader archive-id)
+     (extension :col-type integer :accessor archive-ext-id :initarg :extension)
+     (platform  :col-type integer :accessor archive-platform-id
+                :initarg :platform)
+     (pgversion :col-type string  :accessor archive-pgversion
+                :initarg :pgversion)
+     (archive   :col-type string :accessor archive-filename
+                :initarg :filename))
+  (:documentation "The result of Building an Extension is an Archive.")
+  (:metaclass dao-class)
+  (:keys id))
+
+(defmethod print-object ((archive archive) stream)
+  (print-unreadable-object (archive stream :type t :identity t)
+    (let ((id (when (slot-boundp archive 'id) (archive-id archive))))
+      (with-slots (extension platform started) archive
+        (format stream "~a ~a ~a <~a>" id extension platform started)))))
