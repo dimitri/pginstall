@@ -22,13 +22,14 @@
           (mapcar (lambda (element)
                     (typecase element
                       (symbol (string-downcase (symbol-name element)))
-                      (t      element)))
+                      (t      (drakma:url-encode element :utf8))))
                   query)))
 
 (define-condition server-error ()
   ((uri         :initarg :uri    :reader server-error-uri)
    (status-code :initarg :status :reader server-error-status-code)
-   (reason      :initarg :reason :reader server-error-reason)))
+   (reason      :initarg :reason :reader server-error-reason)
+   (body        :initarg :body   :reader server-error-body)))
 
 (defun query-repo-server (&rest query)
   "Query the repository server and signal a condition when it returns any
@@ -38,7 +39,8 @@
     (declare (ignore headers stream must-close))
     (if (= status-code 200)
         body
-        (error 'server-error :uri uri :status status-code :reason reason))))
+        (error 'server-error
+               :uri uri :status status-code :reason reason :body body))))
 
 
 ;;;
@@ -48,8 +50,8 @@
   "Register *ANIMAL-NAME* on *REPO-SERVER* for current platform."
   (let ((platform (make-instance 'platform)))
     (query-repo-server 'register 'animal
-                       (drakma:url-encode *animal-name* :utf-8)
-                       (drakma:url-encode (os-name platform) :utf8)
+                       *animal-name*
+                       (os-name platform)
                        (os-version platform)
                        (arch platform) )))
 
