@@ -8,15 +8,10 @@
  * distribution.
  */
 
-#ifndef __PGINSTALL_ARCHIVE_H__
-#define __PGINSTALL_ARCHIVE_H__
+#ifndef __PGINSTALL_FUN_H__
+#define __PGINSTALL_FUN_H__
 
-#include "platform.h"
-
-#include <archive.h>
-#include <archive_entry.h>
-
-void maybe_unpack_archive(const char *extname, Platform platform);
-void extract(const char *extname, const char *filename);
+#include "postgres.h"
+#include "nodes/pg_list.h"
 
 #endif

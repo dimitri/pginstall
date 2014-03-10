@@ -13,6 +13,7 @@
 #include "postgres.h"
 
 #include "archive.h"
+#include "communicate.h"
 #include "pginstall.h"
 #include "platform.h"
 #include "utils.h"
@@ -294,11 +295,13 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
 	{
 		case T_CreateExtensionStmt:
 		{
+			PlatformData platform;
 			CreateExtensionStmt *stmt = (CreateExtensionStmt *)parsetree;
 			name = stmt->extname;
 
 			/* See if we need to download an archive for asked extension */
-			maybe_unpack_archive(name);
+			current_platform(&platform);
+			maybe_unpack_archive(name, &platform);
 
 			/* the Extension should be available now.  */
 			fill_in_extension_properties(name, stmt->options,

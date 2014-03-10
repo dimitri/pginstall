@@ -31,13 +31,10 @@ static int copy_data(struct archive *ar, struct archive *aw);
  * directly uses the local archive cache.
  */
 void
-maybe_unpack_archive(const char *extname)
+maybe_unpack_archive(const char *extname, Platform platform)
 {
-	PlatformData platform;
 	char *control_filename = get_extension_control_filename(extname);
 	char *archive_filename;
-
-	current_platform(&platform);
 
 	if (access(control_filename, F_OK) == 0)
 		return;
@@ -46,9 +43,9 @@ maybe_unpack_archive(const char *extname)
 								pginstall_archive_dir,
 								extname,
 								PG_VERSION,
-								platform.os_name,
-								platform.os_version,
-								platform.arch);
+								platform->os_name,
+								platform->os_version,
+								platform->arch);
 
 	if (access(archive_filename, R_OK) == 0)
 	{
@@ -132,8 +129,8 @@ extract(const char *extname, const char *filename)
 					 errmsg("%s", archive_error_string(a))));
 
 		target = archive_entry_clone(entry);
-		path   = archive_entry_pathname(target);
-		path   = compute_target_path(path, control_filename, cflen);
+		path   = (char *)archive_entry_pathname(target);
+		path   = (char *)compute_target_path(path, control_filename, cflen);
 		archive_entry_set_pathname(target, path);
 
 		elog(DEBUG1, "Extracting \"%s\" to \"%s\"",

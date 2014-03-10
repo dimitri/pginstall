@@ -1,0 +1,5 @@
+# pginstall extension
+comment = 'PostgreSQL Extension Installer'
+default_version = '1.0'
+module_pathname = 'pginstall'
+relocatable = true

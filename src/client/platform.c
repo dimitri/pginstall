@@ -160,11 +160,6 @@ parse_osx_name_and_version(Platform platform)
 
 			memcpy(value, first, last-first+1);
 
-			/* replace blanks with _*/
-			for(p=value; *p != 0; p++)
-				if (*p == ' ')
-					*p = '_';
-
 			*next = value;
 			next = NULL;
 
