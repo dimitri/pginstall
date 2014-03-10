@@ -31,8 +31,8 @@
   (check-type extension extension)
   (check-type pgconfig pgconfig)
 
-  (format t "cd ~a" build-root)
-  (format t "make DESTDIR=~a install~%" prefix)
+  (format t "cd ~a~%" build-root)
+  (format t "make PGCONFIG=~a DESTDIR=~a install~%" (pg-config pgconfig) prefix)
 
   ;; we copy the environment so that we can scribble on the copy
   (let* ((environment (environment)))
@@ -81,6 +81,50 @@
 ;;; On the animal, we don't have access to the main repository database, so
 ;;; the arguments we get here are all we are going to be able to work with.
 ;;;
+(defun build-extension-with-pgconfig (extension extension-root pgconfig-path
+                                      &key (pg-config-keys
+                                            '(:CONFIGURE :CC :VERSION :CFLAGS
+                                              :DOCDIR :PKGLIBDIR :SHAREDIR)))
+  "Build extension in given EXTENSION-ROOT path with PGCONFIG-PATH."
+  (let ((archive-filename)
+        (log (make-array '(0) :element-type 'base-char
+                         :fill-pointer 0 :adjustable t)))
+   (with-output-to-string (*standard-output* log)
+     (destructuring-bind (&key version
+                               configure cc cflags
+                               docdir sharedir pkglibdir)
+         ;; and run-pg-config is returning an ALIST, we want a PLIST here.
+         (alexandria:alist-plist
+          (loop :for (key . value) :in (run-pg-config pgconfig-path pg-config-keys)
+             :collect (cons (intern key (find-package "KEYWORD")) value)))
+
+       (let* ((pgconfig (make-instance 'pgconfig
+                                       :pg-config pgconfig-path
+                                       :version   version
+                                       :configure configure
+                                       :cc        cc
+                                       :cflags    cflags))
+              (vers     (cl-ppcre:register-groups-bind (short-version)
+                            ("PostgreSQL (.*)" version)
+                          short-version))
+              (prefix   (extension-install-prefix extension vers)))
+
+         ;; now git close extension sources then build the extension
+         ;; in our per-major-version build directory
+         (git-clean-fdx extension-root)
+         (make-install extension pgconfig extension-root prefix)
+
+         ;; then pack an archive of what we just built
+         (flet ((expand-pg-config-dir (path)
+                  (merge-pathnames (make-pathname :directory `(:relative ,path))
+                                   (make-pathname :directory prefix))))
+           (setf archive-filename
+                 (pack-archive extension vers
+                               :docdir    (expand-pg-config-dir docdir)
+                               :pkglibdir (expand-pg-config-dir pkglibdir)
+                               :sharedir  (expand-pg-config-dir sharedir)))))))
+   (cons archive-filename log)))
+
 (defun build-extension (extension-full-name extension-uri
                         &key
                           (pgconfig-path-list (list-pg-config-in-path))
@@ -91,48 +135,13 @@
                                         :uri extension-uri))
          (root           (extension-build-root extension))
          (pg-config-keys '(:CONFIGURE :CC :VERSION :CFLAGS
-                           :DOCDIR :PKGLIBDIR :SHAREDIR)))
-
-    ;; git clone the extension sources
-    (format t "rm -rf ~a~%" root)
-    (delete-files root :recursive t)
-    (git-clone extension root)
+                           :DOCDIR :PKGLIBDIR :SHAREDIR))
+         (preamble
+          (with-output-to-string (*standard-output*)
+            ;; git clone the extension sources
+            (format t "rm -rf ~a~%" root)
+            (delete-files root :recursive t)
+            (git-clone extension root))))
 
     (loop for pgconfig-path in pgconfig-path-list
-       for config-values = (run-pg-config pgconfig-path pg-config-keys)
-       collect
-       ;; we want the symbols in the destructuring-bind list here to be read in
-       ;; the PGINSTALL.ANIMAL package, not the KEYWORD package.
-       ;; http://www.lispworks.com/documentation/HyperSpec/Body/03_dad.htm
-         (destructuring-bind (&key version
-                                   configure cc cflags
-                                   docdir sharedir pkglibdir)
-             ;; and run-pg-config is returning an ALIST, we want a PLIST here.
-             (alexandria:alist-plist
-              (loop for (key . value) in config-values
-                 collect (cons (intern key (find-package "KEYWORD")) value)))
-
-           (let* ((pgconfig (make-instance 'pgconfig
-                                           :pg-config pgconfig-path
-                                           :version   version
-                                           :configure configure
-                                           :cc        cc
-                                           :cflags    cflags))
-                  (vers     (cl-ppcre:register-groups-bind (short-version)
-                                ("PostgreSQL (.*)" version)
-                              short-version))
-                  (prefix   (extension-install-prefix extension vers)))
-
-             ;; now git close extension sources then build the extension
-             ;; in our per-major-version build directory
-             (git-clean-fdx root)
-             (make-install extension pgconfig root prefix)
-
-             ;; then pack an archive of what we just built
-             (flet ((expand-pg-config-dir (path)
-                      (merge-pathnames (make-pathname :directory `(:relative ,path))
-                                       (make-pathname :directory prefix))))
-               (pack-archive extension vers
-                             :docdir    (expand-pg-config-dir docdir)
-                             :pkglibdir (expand-pg-config-dir pkglibdir)
-                             :sharedir  (expand-pg-config-dir sharedir))))))))
+       collect (build-extension-with-pgconfig extension root pgconfig-path))))

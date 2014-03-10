@@ -171,11 +171,13 @@
 
 (defclass running ()
     ((id        :col-type integer :reader running-id)
-     (extension :col-type integer :accessor running-ext-id :initarg :extension)
+     (queue     :col-type integer :accessor running-queue-id :initarg :extension)
      (animal    :col-type integer :accessor running-animal-id
                 :initarg :animal)
      (started   :col-type local-time :accessor running-started
-                :initarg :started))
+                :initarg :started)
+     (done      :col-type local-time :accessor running-done
+                :initarg :done))
   (:documentation "a Build Job Instance while it's running.")
   (:metaclass dao-class)
   (:keys id))
@@ -194,8 +196,7 @@
                   :initarg :animal)
      (build-stamp :col-type local-time      :col-name buildstamp
                   :accessor build-log-stamp :initarg :build-log-stamp)
-     (result      :col-type integer :accessor build-log-result :initarg :result)
-     (log         :col-type text    :accessor build-log-log :initarg log))
+     (log         :col-type text    :accessor build-log-log :initarg :log))
   (:documentation "a Build Job Log Entry.")
   (:metaclass dao-class)
   (:table-name buildlog)
@@ -233,12 +234,13 @@
 ;;; The build animals upload "archives" of extensions for a specific platform
 ;;;
 (defclass archive ()
-    ((id        :col-type integer :reader archive-id)
+    ((id        :col-type integer :reader archive-id :initarg :id)
      (extension :col-type integer :accessor archive-ext-id :initarg :extension)
      (platform  :col-type integer :accessor archive-platform-id
                 :initarg :platform)
      (pgversion :col-type string  :accessor archive-pgversion
                 :initarg :pgversion)
+     (log       :col-type integer :accessor archive-log :initarg :log)
      (archive   :col-type string :accessor archive-filename
                 :initarg :filename))
   (:documentation "The result of Building an Extension is an Archive.")
@@ -248,5 +250,5 @@
 (defmethod print-object ((archive archive) stream)
   (print-unreadable-object (archive stream :type t :identity t)
     (let ((id (when (slot-boundp archive 'id) (archive-id archive))))
-      (with-slots (extension platform started) archive
-        (format stream "~a ~a ~a <~a>" id extension platform started)))))
+      (with-slots (archive) archive
+        (format stream "~a <~a>" id archive)))))

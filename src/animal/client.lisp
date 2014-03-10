@@ -22,6 +22,7 @@
           (mapcar (lambda (element)
                     (typecase element
                       (symbol (string-downcase (symbol-name element)))
+                      (number (format nil "~a" element))
                       (t      (drakma:url-encode element :utf8))))
                   query)))
 
@@ -53,16 +54,45 @@
                        *animal-name*
                        (os-name platform)
                        (os-version platform)
-                       (arch platform) )))
+                       (arch platform))))
 
 (defun get-extension-to-build ()
   "Get an extension to build from the *REPO-SERVER*, or nil."
   (yason:parse (query-repo-server 'get 'work 'for *animal-name*)))
+
+(defun upload-archive (extension-full-name archive-filename buildlog)
+  "Upload an archive file."
+  (let ((archive                        ; the multi-part POST data
+         (list (pathname archive-filename)
+               :content-type "application/octet-stream"
+               :filename (file-path-file archive-filename))))
+
+   (cl-ppcre:register-groups-bind (pgversion os-name os-version arch)
+       ("^.*--(.*)--(.*)--(.*)--(.*).tar.gz" (file-path-file archive-filename))
+     (drakma:http-request (build-api-uri 'upload 'archive)
+                          :method :post
+                          :form-data t
+                          :content-length t
+                          :parameters `(("archive"    . ,archive)
+                                        ("buildlog"   . ,buildlog)
+                                        ("extension"  . ,extension-full-name)
+                                        ("pgversion"  . ,pgversion)
+                                        ("animal"     . ,*animal-name*)
+                                        ("os-name"    . ,(substitute #\Space
+                                                                     #\_
+                                                                     os-name))
+                                        ("os-version" . ,os-version)
+                                        ("arch"       . ,arch))))))
 
 (defun build-extension-for-server ()
   "Connect to the *REPO-SERVER* and ask for any extension to build for
    registered *ANIMAL-NAME*."
   (let ((extension-hash (get-extension-to-build)))
     (when extension-hash
-      (build-extension (gethash "FULLNAME" extension-hash)
-                       (gethash "URI"      extension-hash)))))
+      (let* ((extension-full-name (gethash "FULLNAME" extension-hash))
+             (extension-uri       (gethash "URI" extension-hash))
+             (archives
+              (build-extension extension-full-name extension-uri)))
+        (loop :for (archive-filename . log) :in archives
+           :collect (parse-archive
+                     (upload-archive extension-full-name archive-filename log)))))))

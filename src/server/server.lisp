@@ -28,8 +28,8 @@
        (:GET  "/api/get/pgconfig/:animal" 'api-get-pgconfig)
        (:GET  "/api/add/pgconfig/:animal" 'api-add-pgconfig)
 
-       (:GET  "/api/get/work/for/:animal"     'api-get-work)
-       (:POST "/api/upload/:extension/:pgversion/:os/:version/:arch" 'api-upload)
+       (:GET  "/api/get/work/for/:animal" 'api-get-work)
+       (:POST "/api/upload/archive"       'api-upload-archive)
 
        ;; Repository server API
        (:GET  "/api/register/animal/:name/:os/:version/:arch" 'api-register-animal)
@@ -122,6 +122,25 @@
 ;;;
 (define-api-function api-queue-extension-build (extension)
   (queue-extension-build extension))
+
+(defun api-upload-archive ()
+  "Handle the upload of a new archive."
+  (setf (hunchentoot:content-type*) "text/plain")
+  (let* ((extension   (hunchentoot:post-parameter "extension"))
+         (pgversion   (hunchentoot:post-parameter "pgversion"))
+         (animal-name (hunchentoot:post-parameter "animal"))
+         (os-name     (hunchentoot:post-parameter "os-name"))
+         (os-version  (hunchentoot:post-parameter "os-version"))
+         (arch        (hunchentoot:post-parameter "arch"))
+         (buildlog    (hunchentoot:post-parameter "buildlog")))
+    (destructuring-bind (archive archive-filename archive-mime-type)
+        (hunchentoot:post-parameter "archive")
+      (declare (ignore archive-mime-type))
+      (with-output-to-string (*standard-output*)
+        (yason:encode
+         (receive-archive extension pgversion
+                          animal-name os-name os-version arch
+                          buildlog archive-filename archive))))))
 
 ;;;
 ;;; API entries for the PostgreSQL embedded client

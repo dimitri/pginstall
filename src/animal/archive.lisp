@@ -19,6 +19,7 @@
 (defun $libdir-to-module-pathname (source target)
   "Parse given SCRIPT and replace strings \"AS '$libdir/...'\" to \"AS
    'MODULE_PATHNAME/...'\"."
+  (format t "rewrite-libdir ~s ~s~%" source target)
   (let ((content (read-file-into-string source)))
     (with-open-file (newscript target
                                :direction :output
@@ -47,7 +48,9 @@
      for source = (file-path-namestring file-path)
      do (if rewrite-$libdir
             ($libdir-to-module-pathname source target)
-            (iolib.base:copy-file source target))
+            (progn
+              (format t "cp ~s ~s~%" source target)
+              (iolib.base:copy-file source target)))
      collect (enough-namestring target base-dir)))
 
 (defun archive-extdir (extension archive-dir)
@@ -57,11 +60,11 @@
    (make-pathname :directory `(:relative ,(short-name extension))) archive-dir))
 
 (defun make-archive-dir (extension basename)
-  "Ensure *archive-path*/BASENAME exists, removing a possibly existing old copy."
+  "Ensure *build-root*/BASENAME exists, removing a possibly existing old copy."
   (declare (type extension extension))
   (let ((archive-dir
          (merge-pathnames
-          (make-pathname :directory `(:relative ,basename)) *archive-path*)))
+          (make-pathname :directory `(:relative ,basename)) *build-root*)))
 
     ;; first, cleanup
     (when (probe-file archive-dir)
@@ -173,12 +176,13 @@
                                    (arch platform)))
          (archive-filename (merge-pathnames (make-pathname :name archive-name
                                                            :type "tar")
-                                            *archive-path*)))
+                                            *build-root*)))
 
     ;; build the archive, it's all ready
     (let ((*default-pathname-defaults*
            (make-pathname :directory (directory-namestring archive-dir))))
 
+      (format t "tar cf ~s ~{~s~^ ~}~%" archive-filename filelist)
       (archive:with-open-archive (archive archive-filename
                                           :direction :output
                                           :if-exists :supersede)

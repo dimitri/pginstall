@@ -76,4 +76,5 @@
            #:queue-extension-build
            #:queue-get-work
            #:select-extensions-available-on-platform
+           #:receive-archive
            ))

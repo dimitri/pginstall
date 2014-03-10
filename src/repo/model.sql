@@ -45,22 +45,25 @@ create table pgconfig (
 --
 create table queue (
   id        serial primary key,
-  extension integer references extension(id) unique
+  extension integer references extension(id),
+  queued    timestamptz default now(),
+  unique(extension, queued)
 );
 
 create table running (
   id        serial primary key,
-  extension integer references extension(id),
+  queue     integer references queue(id) on delete cascade,
   animal    integer references animal(id),
   started   timestamptz default now(),
-  unique(extension, animal)
+  done      timestamptz,
+  unique(queue, animal)
 );
     
 create table buildlog (
   id         serial primary key,
   extension  integer references extension(id),
   animal     integer references animal(id),
-  buildstamp timestamptz,
+  buildstamp timestamptz default now(),
   log        text
 );
 
@@ -72,6 +75,7 @@ create table archive (
   extension integer references extension(id),
   platform  integer references platform(id),
   pgversion text,
+  log       integer references buildlog(id),
   archive   text,
   unique(extension, platform, pgversion)
 );
