@@ -12,53 +12,50 @@
 (defun queue-extension-build (extension-name)
   "Queue a build request for EXTENSION-NAME."
   (with-pgsql-connection (*dburi*)
-    (let ((exists (car (query-dao 'build-queue
-                                   "select q.id, e.id as ext_id,
-                                           e.fullname, e.uri, e.description
-                                     from queue q
-                                          join extension e on q.extension = e.id
-                                          left join running r on r.queue = q.id
-                                    where e.shortname = $1
-                                          and r.done is null
-                                 group by q.id, e.id"
-                                   extension-name))))
-      (or exists
-          (query-dao 'build-queue
-                      "with queue as (
-                         insert into queue (extension)
-                              select id from extension where shortname = $1
-                           returning id, extension
-                       )
-                       select q.id, e.id as ext_id,
-                              e.fullname, e.uri, e.description
-                         from queue q
-                              join extension e on q.extension = e.id"
-                      extension-name)))))
+    (or (query "select q.id, e.id as ext_id,
+                       e.fullname, e.uri, e.description
+                 from queue q
+                      join extension e on q.extension = e.id
+                      left join running r on r.queue = q.id
+                where e.shortname = $1
+                      and r.done is null
+             group by q.id, e.id
+                limit 1"
+               extension-name (:dao build-queue :single))
+        (query "with queue as (
+          insert into queue (extension)
+               select id from extension where shortname = $1
+            returning id, extension
+        )
+        select q.id, e.id as ext_id,
+               e.fullname, e.uri, e.description
+          from queue q
+               join extension e on q.extension = e.id"
+                   extension-name (:dao build-queue :single)))))
 
 (defun queue-get-work (animal-name)
   "Return an Extension object from the build queue"
   (with-pgsql-connection (*dburi*)
-    (car (query-dao 'extension
-                    "with running as (
-                       insert into running(queue, animal)
-                            select q.id, a.id
-                              from queue q
-                                     CROSS JOIN
-                                  (platform p join animal a on a.platform = p.id)
-                             where a.name = $1
-                            except
-                            select r.queue, a.id
-                              from running r
-                                   join animal a on r.animal = a.id
-                             where a.name = $1
-                             limit 1
-                         returning running.*
-                     )
-                     select e.*
-                       from extension e
-                            join queue q on q.extension = e.id
-                            join running r on r.queue = q.id"
-                animal-name))))
+    (query "with running as (
+             insert into running(queue, animal)
+                  select q.id, a.id
+                    from queue q
+                           CROSS JOIN
+                        (platform p join animal a on a.platform = p.id)
+                   where a.name = $1
+                  except
+                  select r.queue, a.id
+                    from running r
+                         join animal a on r.animal = a.id
+                   where a.name = $1
+                   limit 1
+               returning running.*
+           )
+           select e.*
+             from extension e
+                  join queue q on q.extension = e.id
+                  join running r on r.queue = q.id"
+               animal-name (:dao extension :single))))
 
 (defun receive-archive (extension pgversion
                         animal-name os version arch
@@ -68,8 +65,7 @@
     (iolib.base:copy-file archive archive-full-name)
 
     (with-pgsql-connection (*dburi*)
-      (car (query-dao 'archive
-                  "with this_animal as (
+      (query    "with this_animal as (
                      select id from animal where name = $3
                    ),
                         this_platform as (
@@ -117,9 +113,10 @@
                 union all
                    select * from update
                     limit 1"
-                  extension pgversion animal-name os version arch
-                  buildlog
-                  (namestring archive-full-name))))))
+                extension pgversion animal-name os version arch
+                buildlog
+                (namestring archive-full-name)
+                (:dao archive :single)))))
 
 (defun select-extensions-available-on-platform (os version arch)
   "Return the list of available extensions on a given platform."
