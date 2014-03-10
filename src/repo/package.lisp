@@ -77,4 +77,5 @@
            #:queue-get-work
            #:select-extensions-available-on-platform
            #:receive-archive
+           #:archive-pathname
            ))

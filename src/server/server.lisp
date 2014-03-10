@@ -17,8 +17,9 @@
        (:GET  "/" 'home)
 
        ;; Extension API
-       (:GET  "/api/list/extension"                   'api-list-extension)
-       (:GET  "/api/get/extension/:os/:version/:arch" 'api-get-extension)
+       (:GET  "/api/list/extension"                    'api-list-extension)
+       (:GET  "/api/list/extension/:os/:version/:arch" 'api-list-available-extensions)
+       (:GET  "/api/fetch/:extension/:pgversion/:os/:version/:arch" 'api-fetch-archive)
 
        ;; Buildfarm animal API
        (:GET  "/api/list/plafform"   'api-list-platform)
@@ -78,15 +79,17 @@
    data in text-plain"
   (declare (list args))
   `(defun ,fun ,args
-     (with-output-to-string (*standard-output*)
-       (handler-case
-           (let ((result (yason:encode ,@body)))
-             (setf (hunchentoot:content-type*) "text/plain")
-             result)
-         (condition (c)
-           (setf (hunchentoot:return-code*)
-                 hunchentoot:+http-internal-server-error+)
-           (format t "~a" c))))))
+     (let ,(loop :for arg :in args
+              :collect (list arg `(hunchentoot:url-decode ,arg)))
+       (with-output-to-string (*standard-output*)
+         (handler-case
+             (let ((result (yason:encode ,@body)))
+               (setf (hunchentoot:content-type*) "text/plain")
+               result)
+           (condition (c)
+             (setf (hunchentoot:return-code*)
+                   hunchentoot:+http-internal-server-error+)
+             (format t "~a" c)))))))
 
 (defmacro define-api-list (class-name)
   "Define a function that outputs a listing of instances of CLASS-NAME."
@@ -145,6 +148,15 @@
 ;;;
 ;;; API entries for the PostgreSQL embedded client
 ;;;
-(define-api-function api-get-extension (os version arch)
+(define-api-function api-list-available-extensions (os version arch)
   (select-extensions-available-on-platform os version arch))
 
+(defun api-fetch-archive (extension pgversion os version arch)
+  "Return the archive file."
+  (let* ((extension (hunchentoot:url-decode extension))
+         (pgversion (hunchentoot:url-decode pgversion))
+         (os        (hunchentoot:url-decode os))
+         (version   (hunchentoot:url-decode version))
+         (arch      (hunchentoot:url-decode arch))
+         (pathname  (archive-pathname extension pgversion os version arch)))
+    (hunchentoot:handle-static-file pathname "application/octet-stream")))

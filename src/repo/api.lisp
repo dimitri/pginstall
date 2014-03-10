@@ -131,3 +131,17 @@
                         and p.arch = $3"
                 os version arch)))
 
+(defun archive-pathname (extension pgversion os version arch)
+  "Return the pathname to the extension's archive file for given version of
+   PostgreSQL and OS specifications."
+  (with-pgsql-connection (*dburi*)
+    (query "select archive
+              from archive a
+                   join extension e on e.id = a.extension
+                   join platform p on p.id = a.platform
+             where     a.pgversion = $2
+                   and e.shortname = $1
+                   and p.os_name = $3
+                   and p.os_version = $4
+                   and p.arch = $5"
+           extension pgversion os version arch :single)))
