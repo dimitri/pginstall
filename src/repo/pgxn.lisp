@@ -13,7 +13,7 @@
 (in-package #:pginstall.pgxn)
 
 (defvar *pgxn-mirror* "http://api.pgxn.org")
-(defvar *pgxn-index* (concatenate 'string *pgxn-mirror* "index.json"))
+(defvar *pgxn-index* (format nil "~a/~a" *pgxn-mirror* "index.json"))
 
 (defvar *pgxn-api*
   (yason:parse
