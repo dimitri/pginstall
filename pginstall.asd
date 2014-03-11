@@ -45,8 +45,9 @@
                         :depends-on ("common")
 			:components
 			((:file "package")
-                         (:file "dao" :depends-on ("package"))
-                         (:file "api" :depends-on ("package" "dao"))
+                         (:file "dao"   :depends-on ("package"))
+                         (:file "api"   :depends-on ("package" "dao"))
+                         (:file "pgxn"  :depends-on ("package" "dao"))
 			 (:file "setup" :depends-on ("package" "dao"))))
                (:module animal
                         :depends-on ("common" "repo")
