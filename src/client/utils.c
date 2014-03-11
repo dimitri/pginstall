@@ -54,20 +54,20 @@
 char *
 get_extension_control_filename(const char *extname)
 {
-	char		sharepath[MAXPGPATH];
-	char	   *result;
+    char        sharepath[MAXPGPATH];
+    char       *result;
 
-	get_share_path(my_exec_path, sharepath);
-	result = (char *) palloc(MAXPGPATH);
-	snprintf(result, MAXPGPATH, "%s/extension/%s.control",
-			 sharepath, extname);
+    get_share_path(my_exec_path, sharepath);
+    result = (char *) palloc(MAXPGPATH);
+    snprintf(result, MAXPGPATH, "%s/extension/%s.control",
+             sharepath, extname);
 
-	return result;
+    return result;
 }
 
 /*
  * Parse contents of primary or auxiliary control file, and fill in
- * fields of *control.	We parse primary file if version == NULL,
+ * fields of *control.  We parse primary file if version == NULL,
  * else the optional auxiliary file for that version.
  *
  * Control files are supposed to be very short, half a dozen lines,
@@ -76,51 +76,51 @@ get_extension_control_filename(const char *extname)
  */
 static void
 parse_default_version_in_control_file(const char *extname,
-									  char **version,
-									  char **schema)
+                                      char **version,
+                                      char **schema)
 {
-	char	   *filename = get_extension_control_filename(extname);
-	FILE	   *file;
-	ConfigVariable *item,
-		*head = NULL,
-		*tail = NULL;
+    char       *filename = get_extension_control_filename(extname);
+    FILE       *file;
+    ConfigVariable *item,
+        *head = NULL,
+        *tail = NULL;
 
-	if ((file = AllocateFile(filename, "r")) == NULL)
-	{
+    if ((file = AllocateFile(filename, "r")) == NULL)
+    {
         /* we still need to handle the following error here */
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open extension control file \"%s\": %m",
-						filename)));
-	}
+        ereport(ERROR,
+                (errcode_for_file_access(),
+                 errmsg("could not open extension control file \"%s\": %m",
+                        filename)));
+    }
 
-	/*
-	 * Parse the file content, using GUC's file parsing code.  We need not
-	 * check the return value since any errors will be thrown at ERROR level.
-	 */
-	(void) ParseConfigFp(file, filename, 0, ERROR, &head, &tail);
+    /*
+     * Parse the file content, using GUC's file parsing code.  We need not
+     * check the return value since any errors will be thrown at ERROR level.
+     */
+    (void) ParseConfigFp(file, filename, 0, ERROR, &head, &tail);
 
-	FreeFile(file);
+    FreeFile(file);
 
-	/*
-	 * Convert the ConfigVariable list into ExtensionControlFile entries, we
-	 * are only interested into the default version.
-	 */
-	for (item = head; item != NULL; item = item->next)
-	{
-		if (*version == NULL && strcmp(item->name, "default_version") == 0)
-		{
-			*version = pstrdup(item->value);
-		}
-		else if (*schema == NULL && strcmp(item->name, "schema") == 0)
-		{
-			*schema = pstrdup(item->value);
-		}
-	}
+    /*
+     * Convert the ConfigVariable list into ExtensionControlFile entries, we
+     * are only interested into the default version.
+     */
+    for (item = head; item != NULL; item = item->next)
+    {
+        if (*version == NULL && strcmp(item->name, "default_version") == 0)
+        {
+            *version = pstrdup(item->value);
+        }
+        else if (*schema == NULL && strcmp(item->name, "schema") == 0)
+        {
+            *schema = pstrdup(item->value);
+        }
+    }
 
-	FreeConfigVariables(head);
+    FreeConfigVariables(head);
 
-	pfree(filename);
+    pfree(filename);
 }
 
 /*
@@ -133,87 +133,87 @@ parse_default_version_in_control_file(const char *extname,
 void
 rewrite_control_file(const char *extname, const char *control_filename)
 {
-	char *temp_control_filename = psprintf("%s.new", control_filename);
-	FILE	   *file;
-	ConfigVariable *item,
-		*head = NULL,
-		*tail = NULL;
-	bool directory = false;
+    char *temp_control_filename = psprintf("%s.new", control_filename);
+    FILE       *file;
+    ConfigVariable *item,
+        *head = NULL,
+        *tail = NULL;
+    bool directory = false;
 
-	if ((file = AllocateFile(control_filename, "r")) == NULL)
-	{
+    if ((file = AllocateFile(control_filename, "r")) == NULL)
+    {
         /* we still need to handle the following error here */
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open extension control file \"%s\": %m",
-						control_filename)));
-	}
+        ereport(ERROR,
+                (errcode_for_file_access(),
+                 errmsg("could not open extension control file \"%s\": %m",
+                        control_filename)));
+    }
 
-	/*
-	 * Parse the file content, using GUC's file parsing code.  We need not
-	 * check the return value since any errors will be thrown at ERROR level.
-	 */
-	(void) ParseConfigFp(file, control_filename, 0, ERROR, &head, &tail);
+    /*
+     * Parse the file content, using GUC's file parsing code.  We need not
+     * check the return value since any errors will be thrown at ERROR level.
+     */
+    (void) ParseConfigFp(file, control_filename, 0, ERROR, &head, &tail);
 
-	FreeFile(file);
+    FreeFile(file);
 
-	/*
-	 * Now open the new file where to write the new control properties.
-	 */
-	if ((file = AllocateFile(temp_control_filename, "w")) == NULL)
-	{
+    /*
+     * Now open the new file where to write the new control properties.
+     */
+    if ((file = AllocateFile(temp_control_filename, "w")) == NULL)
+    {
         /* we still need to handle the following error here */
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open extension control file \"%s\": %m",
-						temp_control_filename)));
-	}
+        ereport(ERROR,
+                (errcode_for_file_access(),
+                 errmsg("could not open extension control file \"%s\": %m",
+                        temp_control_filename)));
+    }
 
-	/*
-	 * Convert the ConfigVariable list into ExtensionControlFile entries, we
-	 * are only interested into the default version.
-	 */
-	for (item = head; item != NULL; item = item->next)
-	{
-		if (strcmp(item->name, "directory") == 0)
-		{
-			fprintf(file,
-					"directory = '%s/%s'\n",
-					pginstall_extension_dir, extname);
+    /*
+     * Convert the ConfigVariable list into ExtensionControlFile entries, we
+     * are only interested into the default version.
+     */
+    for (item = head; item != NULL; item = item->next)
+    {
+        if (strcmp(item->name, "directory") == 0)
+        {
+            fprintf(file,
+                    "directory = '%s/%s'\n",
+                    pginstall_extension_dir, extname);
 
-			directory = true;
-		}
-		else if (strcmp(item->name, "module_pathname") == 0)
-		{
-			fprintf(file,
-					"module_pathname = '%s/%s/%s'\n",
-					pginstall_extension_dir, extname, extname);
-		}
-		else
-		{
-			fprintf(file, "%s = '%s'\n", item->name, item->value);
-		}
-	}
+            directory = true;
+        }
+        else if (strcmp(item->name, "module_pathname") == 0)
+        {
+            fprintf(file,
+                    "module_pathname = '%s/%s/%s'\n",
+                    pginstall_extension_dir, extname, extname);
+        }
+        else
+        {
+            fprintf(file, "%s = '%s'\n", item->name, item->value);
+        }
+    }
 
-	/* Force writing the directory property */
-	if (!directory)
-	{
-		fprintf(file,
-				"directory = '%s/%s'\n",
-				pginstall_extension_dir, extname);
-	}
+    /* Force writing the directory property */
+    if (!directory)
+    {
+        fprintf(file,
+                "directory = '%s/%s'\n",
+                pginstall_extension_dir, extname);
+    }
 
-	FreeConfigVariables(head);
-	FreeFile(file);
+    FreeConfigVariables(head);
+    FreeFile(file);
 
-	/* And now rename the temp file to its final name */
-	if (rename(temp_control_filename, control_filename) != 0)
-	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not rename file \"%s\" to \"%s\": %m",
-						temp_control_filename, control_filename)));
-	}
+    /* And now rename the temp file to its final name */
+    if (rename(temp_control_filename, control_filename) != 0)
+    {
+        ereport(ERROR,
+                (errcode_for_file_access(),
+                 errmsg("could not rename file \"%s\" to \"%s\": %m",
+                        temp_control_filename, control_filename)));
+    }
 }
 
 /*
@@ -227,41 +227,41 @@ rewrite_control_file(const char *extname, const char *control_filename)
  */
 char *
 get_generic_custom_script_filename(const char *name,
-								   const char *action,
-								   const char *when)
+                                   const char *action,
+                                   const char *when)
 {
-	char	   *result;
+    char       *result;
 
-	if (pginstall_custom_path == NULL)
-		return NULL;
+    if (pginstall_custom_path == NULL)
+        return NULL;
 
-	result = (char *) palloc(MAXPGPATH);
-	snprintf(result, MAXPGPATH, "%s/%s/%s-%s.sql",
-			 pginstall_custom_path, name, when, action);
+    result = (char *) palloc(MAXPGPATH);
+    snprintf(result, MAXPGPATH, "%s/%s/%s-%s.sql",
+             pginstall_custom_path, name, when, action);
 
-	return result;
+    return result;
 }
 
 char *
 get_specific_custom_script_filename(const char *name,
-									const char *when,
-									const char *from_version,
-									const char *version)
+                                    const char *when,
+                                    const char *from_version,
+                                    const char *version)
 {
-	char	   *result;
+    char       *result;
 
-	if (pginstall_custom_path == NULL)
-		return NULL;
+    if (pginstall_custom_path == NULL)
+        return NULL;
 
-	result = (char *) palloc(MAXPGPATH);
-	if (from_version)
-		snprintf(result, MAXPGPATH, "%s/%s/%s--%s--%s.sql",
-				 pginstall_custom_path, name, when, from_version, version);
-	else
-		snprintf(result, MAXPGPATH, "%s/%s/%s--%s.sql",
-				 pginstall_custom_path, name, when, version);
+    result = (char *) palloc(MAXPGPATH);
+    if (from_version)
+        snprintf(result, MAXPGPATH, "%s/%s/%s--%s--%s.sql",
+                 pginstall_custom_path, name, when, from_version, version);
+    else
+        snprintf(result, MAXPGPATH, "%s/%s/%s--%s.sql",
+                 pginstall_custom_path, name, when, version);
 
-	return result;
+    return result;
 }
 
 /*
@@ -271,48 +271,48 @@ get_specific_custom_script_filename(const char *name,
 char *
 get_extension_current_version(const char *extname)
 {
-	char	   *oldVersionName;
-	Relation	extRel;
-	ScanKeyData key[1];
-	SysScanDesc extScan;
-	HeapTuple	extTup;
-	Datum		datum;
-	bool		isnull;
+    char       *oldVersionName;
+    Relation    extRel;
+    ScanKeyData key[1];
+    SysScanDesc extScan;
+    HeapTuple   extTup;
+    Datum       datum;
+    bool        isnull;
 
     /*
      * Look up the extension --- it must already exist in pg_extension
      */
-	extRel = heap_open(ExtensionRelationId, AccessShareLock);
+    extRel = heap_open(ExtensionRelationId, AccessShareLock);
 
-	ScanKeyInit(&key[0],
-				Anum_pg_extension_extname,
-				BTEqualStrategyNumber, F_NAMEEQ,
-				CStringGetDatum(extname));
+    ScanKeyInit(&key[0],
+                Anum_pg_extension_extname,
+                BTEqualStrategyNumber, F_NAMEEQ,
+                CStringGetDatum(extname));
 
-	extScan = systable_beginscan(extRel, ExtensionNameIndexId, true,
-								 NULL, 1, key);
+    extScan = systable_beginscan(extRel, ExtensionNameIndexId, true,
+                                 NULL, 1, key);
 
-	extTup = systable_getnext(extScan);
+    extTup = systable_getnext(extScan);
 
-	if (!HeapTupleIsValid(extTup))
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("extension \"%s\" does not exist", extname)));
+    if (!HeapTupleIsValid(extTup))
+        ereport(ERROR,
+                (errcode(ERRCODE_UNDEFINED_OBJECT),
+                 errmsg("extension \"%s\" does not exist", extname)));
 
-	/*
-	 * Determine the existing version we are updating from
-	 */
-	datum = heap_getattr(extTup, Anum_pg_extension_extversion,
-						 RelationGetDescr(extRel), &isnull);
-	if (isnull)
-		elog(ERROR, "extversion is null");
-	oldVersionName = text_to_cstring(DatumGetTextPP(datum));
+    /*
+     * Determine the existing version we are updating from
+     */
+    datum = heap_getattr(extTup, Anum_pg_extension_extversion,
+                         RelationGetDescr(extRel), &isnull);
+    if (isnull)
+        elog(ERROR, "extversion is null");
+    oldVersionName = text_to_cstring(DatumGetTextPP(datum));
 
-	systable_endscan(extScan);
+    systable_endscan(extScan);
 
-	heap_close(extRel, AccessShareLock);
+    heap_close(extRel, AccessShareLock);
 
-	return oldVersionName;
+    return oldVersionName;
 }
 
 /*
@@ -320,78 +320,78 @@ get_extension_current_version(const char *extname)
  */
 void
 fill_in_extension_properties(const char *extname,
-							 List *options,
-							 char **schema,
-							 char **old_version,
-							 char **new_version)
+                             List *options,
+                             char **schema,
+                             char **old_version,
+                             char **new_version)
 {
-	ListCell   *lc;
-	DefElem    *d_schema = NULL;
-	DefElem    *d_new_version = NULL;
-	DefElem    *d_old_version = NULL;
+    ListCell   *lc;
+    DefElem    *d_schema = NULL;
+    DefElem    *d_new_version = NULL;
+    DefElem    *d_old_version = NULL;
 
-	/*
-	 * Read the statement option list, taking care not to issue any errors here
-	 * ourselves if at all possible: let the core code handle them.
-	 */
-	foreach(lc, options)
-	{
-		DefElem    *defel = (DefElem *) lfirst(lc);
+    /*
+     * Read the statement option list, taking care not to issue any errors here
+     * ourselves if at all possible: let the core code handle them.
+     */
+    foreach(lc, options)
+    {
+        DefElem    *defel = (DefElem *) lfirst(lc);
 
-		if (strcmp(defel->defname, "schema") == 0)
-		{
-			d_schema = defel;
-		}
-		else if (strcmp(defel->defname, "new_version") == 0)
-		{
-			d_new_version = defel;
-		}
-		else if (strcmp(defel->defname, "old_version") == 0)
-		{
-			d_old_version = defel;
-		}
-		else
-		{
-			/* intentionnaly don't try and catch errors here */
-		}
-	}
+        if (strcmp(defel->defname, "schema") == 0)
+        {
+            d_schema = defel;
+        }
+        else if (strcmp(defel->defname, "new_version") == 0)
+        {
+            d_new_version = defel;
+        }
+        else if (strcmp(defel->defname, "old_version") == 0)
+        {
+            d_old_version = defel;
+        }
+        else
+        {
+            /* intentionnaly don't try and catch errors here */
+        }
+    }
 
-	if (d_schema && d_schema->arg)
-		*schema = strVal(d_schema->arg);
+    if (d_schema && d_schema->arg)
+        *schema = strVal(d_schema->arg);
 
-	if (d_old_version && d_old_version->arg)
-		*old_version = strVal(d_old_version->arg);
+    if (d_old_version && d_old_version->arg)
+        *old_version = strVal(d_old_version->arg);
 
-	if (d_new_version && d_new_version->arg)
-		*new_version = strVal(d_new_version->arg);
+    if (d_new_version && d_new_version->arg)
+        *new_version = strVal(d_new_version->arg);
 
-	if (*new_version == NULL || *schema == NULL)
-		/* fetch the default_version from the extension's control file */
-		parse_default_version_in_control_file(extname, new_version, schema);
+    if (*new_version == NULL || *schema == NULL)
+        /* fetch the default_version from the extension's control file */
+        parse_default_version_in_control_file(extname, new_version, schema);
 
-	/* schema might be given neither in the statement nor the control file */
-	if (*schema == NULL)
-	{
-		/*
-		 * Use the current default creation namespace, which is the first
-		 * explicit entry in the search_path.
-		 */
-		Oid         schemaOid;
-		List	   *search_path = fetch_search_path(false);
+    /* schema might be given neither in the statement nor the control file */
+    if (*schema == NULL)
+    {
+        /*
+         * Use the current default creation namespace, which is the first
+         * explicit entry in the search_path.
+         */
+        Oid         schemaOid;
+        List       *search_path = fetch_search_path(false);
 
-		if (search_path == NIL)	/* nothing valid in search_path? */
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_SCHEMA),
-					 errmsg("no schema has been selected to create in")));
-		schemaOid = linitial_oid(search_path);
-		*schema = get_namespace_name(schemaOid);
-		if (*schema == NULL) /* recently-deleted namespace? */
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_SCHEMA),
-					 errmsg("no schema has been selected to create in")));
+        if (search_path == NIL) /* nothing valid in search_path? */
+            ereport(ERROR,
+                    (errcode(ERRCODE_UNDEFINED_SCHEMA),
+                     errmsg("no schema has been selected to create in")));
+        schemaOid = linitial_oid(search_path);
+        *schema = get_namespace_name(schemaOid);
+        if (*schema == NULL) /* recently-deleted namespace? */
+            ereport(ERROR,
+                    (errcode(ERRCODE_UNDEFINED_SCHEMA),
+                     errmsg("no schema has been selected to create in")));
 
-		list_free(search_path);
-	}
+        list_free(search_path);
+    }
 }
 
 /*
@@ -400,37 +400,37 @@ fill_in_extension_properties(const char *extname,
 static char *
 read_custom_script_file(const char *filename)
 {
-	int			src_encoding, dest_encoding = GetDatabaseEncoding();
-	bytea	   *content;
-	char	   *src_str;
-	char	   *dest_str;
-	int			len;
+    int         src_encoding, dest_encoding = GetDatabaseEncoding();
+    bytea      *content;
+    char       *src_str;
+    char       *dest_str;
+    int         len;
 
-	content = read_binary_file(filename, 0, -1);
+    content = read_binary_file(filename, 0, -1);
 
-	/* use database encoding */
-	src_encoding = dest_encoding;
+    /* use database encoding */
+    src_encoding = dest_encoding;
 
-	/* make sure that source string is valid in the expected encoding */
-	len = VARSIZE_ANY_EXHDR(content);
-	src_str = VARDATA_ANY(content);
-	pg_verify_mbstr_len(src_encoding, src_str, len, false);
+    /* make sure that source string is valid in the expected encoding */
+    len = VARSIZE_ANY_EXHDR(content);
+    src_str = VARDATA_ANY(content);
+    pg_verify_mbstr_len(src_encoding, src_str, len, false);
 
-	/* convert the encoding to the database encoding */
-	dest_str = (char *) pg_do_encoding_conversion((unsigned char *) src_str,
-												  len,
-												  src_encoding,
-												  dest_encoding);
+    /* convert the encoding to the database encoding */
+    dest_str = (char *) pg_do_encoding_conversion((unsigned char *) src_str,
+                                                  len,
+                                                  src_encoding,
+                                                  dest_encoding);
 
-	/* if no conversion happened, we have to arrange for null termination */
-	if (dest_str == src_str)
-	{
-		dest_str = (char *) palloc(len + 1);
-		memcpy(dest_str, src_str, len);
-		dest_str[len] = '\0';
-	}
+    /* if no conversion happened, we have to arrange for null termination */
+    if (dest_str == src_str)
+    {
+        dest_str = (char *) palloc(len + 1);
+        memcpy(dest_str, src_str, len);
+        dest_str[len] = '\0';
+    }
 
-	return dest_str;
+    return dest_str;
 }
 
 /*
@@ -439,7 +439,7 @@ read_custom_script_file(const char *filename)
  * filename is used only to report errors.
  *
  * Note: it's tempting to just use SPI to execute the string, but that does
- * not work very well.	The really serious problem is that SPI will parse,
+ * not work very well.  The really serious problem is that SPI will parse,
  * analyze, and plan the whole string before executing any of it; of course
  * this fails if there are any plannable statements referring to objects
  * created earlier in the script.  A lesser annoyance is that SPI insists
@@ -449,90 +449,90 @@ read_custom_script_file(const char *filename)
 static void
 execute_sql_string(const char *sql, const char *filename)
 {
-	List	   *raw_parsetree_list;
-	DestReceiver *dest;
-	ListCell   *lc1;
+    List       *raw_parsetree_list;
+    DestReceiver *dest;
+    ListCell   *lc1;
 
-	/*
-	 * Parse the SQL string into a list of raw parse trees.
-	 */
-	raw_parsetree_list = pg_parse_query(sql);
+    /*
+     * Parse the SQL string into a list of raw parse trees.
+     */
+    raw_parsetree_list = pg_parse_query(sql);
 
-	/* All output from SELECTs goes to the bit bucket */
-	dest = CreateDestReceiver(DestNone);
+    /* All output from SELECTs goes to the bit bucket */
+    dest = CreateDestReceiver(DestNone);
 
-	/*
-	 * Do parse analysis, rule rewrite, planning, and execution for each raw
-	 * parsetree.  We must fully execute each query before beginning parse
-	 * analysis on the next one, since there may be interdependencies.
-	 */
-	foreach(lc1, raw_parsetree_list)
-	{
-		Node	   *parsetree = (Node *) lfirst(lc1);
-		List	   *stmt_list;
-		ListCell   *lc2;
+    /*
+     * Do parse analysis, rule rewrite, planning, and execution for each raw
+     * parsetree.  We must fully execute each query before beginning parse
+     * analysis on the next one, since there may be interdependencies.
+     */
+    foreach(lc1, raw_parsetree_list)
+    {
+        Node       *parsetree = (Node *) lfirst(lc1);
+        List       *stmt_list;
+        ListCell   *lc2;
 
-		stmt_list = pg_analyze_and_rewrite(parsetree,
-										   sql,
-										   NULL,
-										   0);
-		stmt_list = pg_plan_queries(stmt_list, 0, NULL);
+        stmt_list = pg_analyze_and_rewrite(parsetree,
+                                           sql,
+                                           NULL,
+                                           0);
+        stmt_list = pg_plan_queries(stmt_list, 0, NULL);
 
-		foreach(lc2, stmt_list)
-		{
-			Node	   *stmt = (Node *) lfirst(lc2);
+        foreach(lc2, stmt_list)
+        {
+            Node       *stmt = (Node *) lfirst(lc2);
 
-			if (IsA(stmt, TransactionStmt))
-				ereport(ERROR,
-						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("transaction control statements are not allowed within an extension script")));
+            if (IsA(stmt, TransactionStmt))
+                ereport(ERROR,
+                        (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+                         errmsg("transaction control statements are not allowed within an extension script")));
 
-			CommandCounterIncrement();
+            CommandCounterIncrement();
 
-			PushActiveSnapshot(GetTransactionSnapshot());
+            PushActiveSnapshot(GetTransactionSnapshot());
 
-			if (IsA(stmt, PlannedStmt) &&
-				((PlannedStmt *) stmt)->utilityStmt == NULL)
-			{
-				QueryDesc  *qdesc;
+            if (IsA(stmt, PlannedStmt) &&
+                ((PlannedStmt *) stmt)->utilityStmt == NULL)
+            {
+                QueryDesc  *qdesc;
 
-				qdesc = CreateQueryDesc((PlannedStmt *) stmt,
-										sql,
-										GetActiveSnapshot(), NULL,
-										dest, NULL, 0);
+                qdesc = CreateQueryDesc((PlannedStmt *) stmt,
+                                        sql,
+                                        GetActiveSnapshot(), NULL,
+                                        dest, NULL, 0);
 
-				ExecutorStart(qdesc, 0);
-				ExecutorRun(qdesc, ForwardScanDirection, 0);
-				ExecutorFinish(qdesc);
-				ExecutorEnd(qdesc);
+                ExecutorStart(qdesc, 0);
+                ExecutorRun(qdesc, ForwardScanDirection, 0);
+                ExecutorFinish(qdesc);
+                ExecutorEnd(qdesc);
 
-				FreeQueryDesc(qdesc);
-			}
-			else
-			{
+                FreeQueryDesc(qdesc);
+            }
+            else
+            {
 #if PG_MAJOR_VERSION == 903
-				ProcessUtility(stmt,
-							   sql,
-							   PROCESS_UTILITY_QUERY,
-							   NULL,
-							   dest,
-							   NULL);
+                ProcessUtility(stmt,
+                               sql,
+                               PROCESS_UTILITY_QUERY,
+                               NULL,
+                               dest,
+                               NULL);
 #elif PG_MAJOR_VERSION < 903
-				ProcessUtility(stmt,
-							   sql,
-							   (ProcessUtilityContext) NULL,
-							   false,		/* not top level */
-							   dest,
-							   NULL);
+                ProcessUtility(stmt,
+                               sql,
+                               (ProcessUtilityContext) NULL,
+                               false,       /* not top level */
+                               dest,
+                               NULL);
 #endif
-			}
+            }
 
-			PopActiveSnapshot();
-		}
-	}
+            PopActiveSnapshot();
+        }
+    }
 
-	/* Be sure to advance the command counter after the last script command */
-	CommandCounterIncrement();
+    /* Be sure to advance the command counter after the last script command */
+    CommandCounterIncrement();
 }
 
 /*
@@ -545,19 +545,19 @@ execute_sql_string(const char *sql, const char *filename)
 static char *
 get_current_database_owner_name()
 {
-	HeapTuple	dbtuple;
-	Oid         owner;
+    HeapTuple   dbtuple;
+    Oid         owner;
 
-	dbtuple = SearchSysCache1(DATABASEOID, MyDatabaseId);
-	if (HeapTupleIsValid(dbtuple))
-	{
-		owner = ((Form_pg_database) GETSTRUCT(dbtuple))->datdba;
-		ReleaseSysCache(dbtuple);
-	}
-	else
-		return NULL;
+    dbtuple = SearchSysCache1(DATABASEOID, MyDatabaseId);
+    if (HeapTupleIsValid(dbtuple))
+    {
+        owner = ((Form_pg_database) GETSTRUCT(dbtuple))->datdba;
+        ReleaseSysCache(dbtuple);
+    }
+    else
+        return NULL;
 
-	return GetUserNameFromId(owner);
+    return GetUserNameFromId(owner);
 }
 
 /*
@@ -566,120 +566,120 @@ get_current_database_owner_name()
 void
 execute_custom_script(const char *filename, const char *schemaName)
 {
-	int			save_nestlevel;
-	StringInfoData pathbuf;
-	const char *qSchemaName = quote_identifier(schemaName);
+    int         save_nestlevel;
+    StringInfoData pathbuf;
+    const char *qSchemaName = quote_identifier(schemaName);
 
-	elog(DEBUG1, "Executing custom script \"%s\"", filename);
+    elog(DEBUG1, "Executing custom script \"%s\"", filename);
 
-	/*
-	 * Force client_min_messages and log_min_messages to be at least WARNING,
-	 * so that we won't spam the user with useless NOTICE messages from common
-	 * script actions like creating shell types.
-	 *
-	 * We use the equivalent of a function SET option to allow the setting to
-	 * persist for exactly the duration of the script execution.  guc.c also
-	 * takes care of undoing the setting on error.
-	 */
-	save_nestlevel = NewGUCNestLevel();
+    /*
+     * Force client_min_messages and log_min_messages to be at least WARNING,
+     * so that we won't spam the user with useless NOTICE messages from common
+     * script actions like creating shell types.
+     *
+     * We use the equivalent of a function SET option to allow the setting to
+     * persist for exactly the duration of the script execution.  guc.c also
+     * takes care of undoing the setting on error.
+     */
+    save_nestlevel = NewGUCNestLevel();
 
-	if (client_min_messages < WARNING)
-		(void) set_config_option("client_min_messages", "warning",
-								 PGC_USERSET, PGC_S_SESSION,
-								 GUC_ACTION_SAVE, true
+    if (client_min_messages < WARNING)
+        (void) set_config_option("client_min_messages", "warning",
+                                 PGC_USERSET, PGC_S_SESSION,
+                                 GUC_ACTION_SAVE, true
 #if PG_MAJOR_VERSION > 901
-								 , 0
+                                 , 0
 #endif
-			);
-	if (log_min_messages < WARNING)
-		(void) set_config_option("log_min_messages", "warning",
-								 PGC_SUSET, PGC_S_SESSION,
-								 GUC_ACTION_SAVE, true
+            );
+    if (log_min_messages < WARNING)
+        (void) set_config_option("log_min_messages", "warning",
+                                 PGC_SUSET, PGC_S_SESSION,
+                                 GUC_ACTION_SAVE, true
 #if PG_MAJOR_VERSION > 901
-								 , 0
+                                 , 0
 #endif
-			);
+            );
 
-	/*
-	 * Set up the search path to contain the target schema, then the schemas
-	 * of any prerequisite extensions, and nothing else.  In particular this
-	 * makes the target schema be the default creation target namespace.
-	 *
-	 * Note: it might look tempting to use PushOverrideSearchPath for this,
-	 * but we cannot do that.  We have to actually set the search_path GUC in
-	 * case the extension script examines or changes it.  In any case, the
-	 * GUC_ACTION_SAVE method is just as convenient.
-	 */
-	initStringInfo(&pathbuf);
-	appendStringInfoString(&pathbuf, quote_identifier(schemaName));
+    /*
+     * Set up the search path to contain the target schema, then the schemas
+     * of any prerequisite extensions, and nothing else.  In particular this
+     * makes the target schema be the default creation target namespace.
+     *
+     * Note: it might look tempting to use PushOverrideSearchPath for this,
+     * but we cannot do that.  We have to actually set the search_path GUC in
+     * case the extension script examines or changes it.  In any case, the
+     * GUC_ACTION_SAVE method is just as convenient.
+     */
+    initStringInfo(&pathbuf);
+    appendStringInfoString(&pathbuf, quote_identifier(schemaName));
 
-	(void) set_config_option("search_path", pathbuf.data,
-							 PGC_USERSET, PGC_S_SESSION,
-							 GUC_ACTION_SAVE, true
+    (void) set_config_option("search_path", pathbuf.data,
+                             PGC_USERSET, PGC_S_SESSION,
+                             GUC_ACTION_SAVE, true
 #if PG_MAJOR_VERSION > 901
-							 , 0
+                             , 0
 #endif
-		);
+        );
 
-	PG_TRY();
-	{
-		char	   *c_sql = read_custom_script_file(filename);
-		Datum		t_sql;
+    PG_TRY();
+    {
+        char       *c_sql = read_custom_script_file(filename);
+        Datum       t_sql;
 
-		/* We use various functions that want to operate on text datums */
-		t_sql = CStringGetTextDatum(c_sql);
+        /* We use various functions that want to operate on text datums */
+        t_sql = CStringGetTextDatum(c_sql);
 
-		/*
-		 * Reduce any lines beginning with "\echo" to empty.  This allows
-		 * scripts to contain messages telling people not to run them via
-		 * psql, which has been found to be necessary due to old habits.
-		 */
-		t_sql = DirectFunctionCall4Coll(textregexreplace,
-										C_COLLATION_OID,
-										t_sql,
-										CStringGetTextDatum("^\\\\echo.*$"),
-										CStringGetTextDatum(""),
-										CStringGetTextDatum("ng"));
+        /*
+         * Reduce any lines beginning with "\echo" to empty.  This allows
+         * scripts to contain messages telling people not to run them via
+         * psql, which has been found to be necessary due to old habits.
+         */
+        t_sql = DirectFunctionCall4Coll(textregexreplace,
+                                        C_COLLATION_OID,
+                                        t_sql,
+                                        CStringGetTextDatum("^\\\\echo.*$"),
+                                        CStringGetTextDatum(""),
+                                        CStringGetTextDatum("ng"));
 
-		/*
-		 * substitute the target schema name for occurrences of @extschema@.
-		 */
-		t_sql = DirectFunctionCall3(replace_text,
-									t_sql,
-									CStringGetTextDatum("@extschema@"),
-									CStringGetTextDatum(qSchemaName));
+        /*
+         * substitute the target schema name for occurrences of @extschema@.
+         */
+        t_sql = DirectFunctionCall3(replace_text,
+                                    t_sql,
+                                    CStringGetTextDatum("@extschema@"),
+                                    CStringGetTextDatum(qSchemaName));
 
-		/*
-		 * substitute the current user name for occurrences of @current_user@
-		 */
-		t_sql = DirectFunctionCall3(replace_text,
-									t_sql,
-									CStringGetTextDatum("@current_user@"),
-									CStringGetTextDatum(
-										GetUserNameFromId(GetUserId())));
+        /*
+         * substitute the current user name for occurrences of @current_user@
+         */
+        t_sql = DirectFunctionCall3(replace_text,
+                                    t_sql,
+                                    CStringGetTextDatum("@current_user@"),
+                                    CStringGetTextDatum(
+                                        GetUserNameFromId(GetUserId())));
 
-		/*
-		 * substitute the database owner for occurrences of @database_owner@
-		 */
-		t_sql = DirectFunctionCall3(replace_text,
-									t_sql,
-									CStringGetTextDatum("@database_owner@"),
-									CStringGetTextDatum(
-										get_current_database_owner_name()));
+        /*
+         * substitute the database owner for occurrences of @database_owner@
+         */
+        t_sql = DirectFunctionCall3(replace_text,
+                                    t_sql,
+                                    CStringGetTextDatum("@database_owner@"),
+                                    CStringGetTextDatum(
+                                        get_current_database_owner_name()));
 
-		/* And now back to C string */
-		c_sql = text_to_cstring(DatumGetTextPP(t_sql));
+        /* And now back to C string */
+        c_sql = text_to_cstring(DatumGetTextPP(t_sql));
 
-		execute_sql_string(c_sql, filename);
-	}
-	PG_CATCH();
-	{
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
+        execute_sql_string(c_sql, filename);
+    }
+    PG_CATCH();
+    {
+        PG_RE_THROW();
+    }
+    PG_END_TRY();
 
-	/*
-	 * Restore the GUC variables we set above.
-	 */
-	AtEOXact_GUC(true, save_nestlevel);
+    /*
+     * Restore the GUC variables we set above.
+     */
+    AtEOXact_GUC(true, save_nestlevel);
 }

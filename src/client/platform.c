@@ -27,46 +27,46 @@ void parse_osx_name_and_version(Platform platform);
 void
 current_platform(Platform platform)
 {
-	struct utsname utsname;
+    struct utsname utsname;
 
-	if (uname(&utsname) == -1)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYSTEM_ERROR),
-				 errmsg("Failed to retrieve uname information"),
-				 errdetail("%s", strerror(errno))));
+    if (uname(&utsname) == -1)
+        ereport(ERROR,
+                (errcode(ERRCODE_SYSTEM_ERROR),
+                 errmsg("Failed to retrieve uname information"),
+                 errdetail("%s", strerror(errno))));
 
-	/* We have the architecture */
-	platform->arch = pstrdup(utsname.machine);
+    /* We have the architecture */
+    platform->arch = pstrdup(utsname.machine);
 
-	/*
-	 * Now retrieve the real OS name and version depending on the kernel name,
-	 * uname.sysname being something like "Linux" or "Darwin".
-	 */
-	if (strncmp("Darwin", utsname.sysname, strlen("Darwin")) == 0)
-	{
-		parse_osx_name_and_version(platform);
-	}
-	else if (strncmp("Linux", utsname.sysname, strlen("Linux")) == 0)
-	{
-		if (access(DEBIAN_VERSION, R_OK) == 0)
-		{
-			platform->os_name = pstrdup("Debian");
-			platform->os_version = read_debian_version(DEBIAN_VERSION);
-		}
-		else if (access(CENTOS_RELEASE, R_OK) == 0)
-		{
-			platform->os_name = pstrdup("CentOS");
-			platform->os_version = read_centos_version(CENTOS_RELEASE);
-		}
-	}
-	else
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_SYSTEM_ERROR),
-				 errmsg("System is not supported by pginstall: \"%s\"",
-						utsname.sysname)));
-	}
-	return;
+    /*
+     * Now retrieve the real OS name and version depending on the kernel name,
+     * uname.sysname being something like "Linux" or "Darwin".
+     */
+    if (strncmp("Darwin", utsname.sysname, strlen("Darwin")) == 0)
+    {
+        parse_osx_name_and_version(platform);
+    }
+    else if (strncmp("Linux", utsname.sysname, strlen("Linux")) == 0)
+    {
+        if (access(DEBIAN_VERSION, R_OK) == 0)
+        {
+            platform->os_name = pstrdup("Debian");
+            platform->os_version = read_debian_version(DEBIAN_VERSION);
+        }
+        else if (access(CENTOS_RELEASE, R_OK) == 0)
+        {
+            platform->os_name = pstrdup("CentOS");
+            platform->os_version = read_centos_version(CENTOS_RELEASE);
+        }
+    }
+    else
+    {
+        ereport(ERROR,
+                (errcode(ERRCODE_SYSTEM_ERROR),
+                 errmsg("System is not supported by pginstall: \"%s\"",
+                        utsname.sysname)));
+    }
+    return;
 }
 
 /*
@@ -75,25 +75,25 @@ current_platform(Platform platform)
 char *
 read_debian_version(char *filename)
 {
-	char *p;
-	char *version = (char *)palloc0(MAXVERSION);
-	FILE *file;
+    char *p;
+    char *version = (char *)palloc0(MAXVERSION);
+    FILE *file;
 
-	if ((file = AllocateFile(filename, "r")) == NULL)
-	{
+    if ((file = AllocateFile(filename, "r")) == NULL)
+    {
         /* we still need to handle the following error here */
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open  \"%s\": %m", filename)));
-	}
-	fgets(version, MAXVERSION, file);
-	FreeFile(file);
+        ereport(ERROR,
+                (errcode_for_file_access(),
+                 errmsg("could not open  \"%s\": %m", filename)));
+    }
+    fgets(version, MAXVERSION, file);
+    FreeFile(file);
 
-	for(p=version; *p != '\0'; p++)
-		if (*p == '\n')
-			*p = '\0';
+    for(p=version; *p != '\0'; p++)
+        if (*p == '\n')
+            *p = '\0';
 
-	return version;
+    return version;
 }
 
 /*
@@ -103,26 +103,26 @@ read_debian_version(char *filename)
 char *
 read_centos_version(char *filename)
 {
-	char *version, *next_space;
-	char *osversion = (char *)palloc0(MAXVERSION);
-	FILE *file;
+    char *version, *next_space;
+    char *osversion = (char *)palloc0(MAXVERSION);
+    FILE *file;
 
-	if ((file = AllocateFile(filename, "r")) == NULL)
-	{
+    if ((file = AllocateFile(filename, "r")) == NULL)
+    {
         /* we still need to handle the following error here */
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open  \"%s\": %m", filename)));
-	}
-	fgets(osversion, MAXVERSION, file);
-	FreeFile(file);
+        ereport(ERROR,
+                (errcode_for_file_access(),
+                 errmsg("could not open  \"%s\": %m", filename)));
+    }
+    fgets(osversion, MAXVERSION, file);
+    FreeFile(file);
 
-	/* let's breathe and be optimistic and confident */
-	version = strchr(strchr(osversion, ' ') + 1, ' ') + 1;
-	next_space = strchr(version, ' ');
-	*next_space = '\0';
+    /* let's breathe and be optimistic and confident */
+    version = strchr(strchr(osversion, ' ') + 1, ' ') + 1;
+    next_space = strchr(version, ' ');
+    *next_space = '\0';
 
-	return pstrdup(version);
+    return pstrdup(version);
 }
 
 /*
@@ -135,48 +135,48 @@ read_centos_version(char *filename)
 void
 parse_osx_name_and_version(Platform platform)
 {
-	FILE  *file;
-	size_t len;
-	char  *line;
-	char **next = NULL;
+    FILE  *file;
+    size_t len;
+    char  *line;
+    char **next = NULL;
 
-	if ((file = AllocateFile(SYSTEM_VERSION_PLIST, "r")) == NULL)
-	{
+    if ((file = AllocateFile(SYSTEM_VERSION_PLIST, "r")) == NULL)
+    {
         /* we still need to handle the following error here */
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not open  \"%s\": %m", SYSTEM_VERSION_PLIST)));
-	}
+        ereport(ERROR,
+                (errcode_for_file_access(),
+                 errmsg("could not open  \"%s\": %m", SYSTEM_VERSION_PLIST)));
+    }
 
-	while ((line = fgetln(file, &len)) != NULL)
-	{
-		if (next != NULL)
-		{
-			/* Parse a <string> value in the XML file. */
-			char *first = strchr(line, '>') + 1;
-			char *last  = strchr(first, '<') - 1;
-			char *value = (char *)palloc0(last-first+2);
-			char *p;
+    while ((line = fgetln(file, &len)) != NULL)
+    {
+        if (next != NULL)
+        {
+            /* Parse a <string> value in the XML file. */
+            char *first = strchr(line, '>') + 1;
+            char *last  = strchr(first, '<') - 1;
+            char *value = (char *)palloc0(last-first+2);
+            char *p;
 
-			memcpy(value, first, last-first+1);
+            memcpy(value, first, last-first+1);
 
-			*next = value;
-			next = NULL;
+            *next = value;
+            next = NULL;
 
-			continue;
-		}
+            continue;
+        }
 
-		if (line[len - 1] == '\n')
-			line[len - 1] = '\0';
+        if (line[len - 1] == '\n')
+            line[len - 1] = '\0';
 
-		if (strstr(line, "ProductName") != NULL)
-		{
-			next = &(platform->os_name);
-		}
-		else if (strstr(line, "ProductVersion") != NULL)
-		{
-			next = &(platform->os_version);
-		}
-	}
-	FreeFile(file);
+        if (strstr(line, "ProductName") != NULL)
+        {
+            next = &(platform->os_name);
+        }
+        else if (strstr(line, "ProductVersion") != NULL)
+        {
+            next = &(platform->os_version);
+        }
+    }
+    FreeFile(file);
 }

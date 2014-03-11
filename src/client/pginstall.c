@@ -61,46 +61,46 @@ PG_MODULE_MAGIC;
 char *pginstall_archive_dir   = NULL;
 char *pginstall_control_dir   = NULL;
 char *pginstall_extension_dir = NULL;
-char *pginstall_repository 	  = NULL;
+char *pginstall_repository    = NULL;
 char *pginstall_custom_path   = NULL;
 char *pginstall_whitelist     = NULL;
 bool  pginstall_sudo          = false;
 
 static ProcessUtility_hook_type prev_ProcessUtility = NULL;
 
-void		_PG_init(void);
-void		_PG_fini(void);
+void        _PG_init(void);
+void        _PG_fini(void);
 
 #if PG_MAJOR_VERSION < 903
 #define PROCESS_UTILITY_PROTO_ARGS Node *parsetree, const char *queryString, \
-		ParamListInfo params, bool isTopLevel,							\
-		DestReceiver *dest, char *completionTag
+        ParamListInfo params, bool isTopLevel,                          \
+        DestReceiver *dest, char *completionTag
 
-#define PROCESS_UTILITY_ARGS parsetree, queryString, params,	\
-		isTopLevel, dest, completionTag
+#define PROCESS_UTILITY_ARGS parsetree, queryString, params,    \
+        isTopLevel, dest, completionTag
 #else
-#define PROCESS_UTILITY_PROTO_ARGS Node *parsetree,	\
-		const char *queryString,					\
-		ProcessUtilityContext context,				\
-		ParamListInfo params,						\
-		DestReceiver *dest,							\
-		char *completionTag
+#define PROCESS_UTILITY_PROTO_ARGS Node *parsetree, \
+        const char *queryString,                    \
+        ProcessUtilityContext context,              \
+        ParamListInfo params,                       \
+        DestReceiver *dest,                         \
+        char *completionTag
 
-#define PROCESS_UTILITY_ARGS parsetree, queryString, context,	\
-		params, dest, completionTag
-#endif	/* PG_MAJOR_VERSION */
+#define PROCESS_UTILITY_ARGS parsetree, queryString, context,   \
+        params, dest, completionTag
+#endif  /* PG_MAJOR_VERSION */
 
 static void pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS);
 static void call_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS,
-								const char *name,
-								const char *schema,
-								const char *old_version,
-								const char *new_version,
-								const char *action);
+                                const char *name,
+                                const char *schema,
+                                const char *old_version,
+                                const char *new_version,
+                                const char *action);
 static void call_RawProcessUtility(PROCESS_UTILITY_PROTO_ARGS);
 
 /*
- * _PG_init()			- library load-time initialization
+ * _PG_init()           - library load-time initialization
  *
  * DO NOT make this static nor change its name!
  *
@@ -109,92 +109,92 @@ static void call_RawProcessUtility(PROCESS_UTILITY_PROTO_ARGS);
 void
 _PG_init(void)
 {
-	char		sharepath[MAXPGPATH];
-	char	   *default_control_directory;
+    char        sharepath[MAXPGPATH];
+    char       *default_control_directory;
 
-	get_share_path(my_exec_path, sharepath);
-	default_control_directory = (char *) palloc(MAXPGPATH);
-	snprintf(default_control_directory, MAXPGPATH, "%s/extension", sharepath);
+    get_share_path(my_exec_path, sharepath);
+    default_control_directory = (char *) palloc(MAXPGPATH);
+    snprintf(default_control_directory, MAXPGPATH, "%s/extension", sharepath);
 
-	DefineCustomStringVariable("pginstall.archive_dir",
-							   "Path where to download extension archives.",
-							   "",
-							   &pginstall_archive_dir,
-							   "",
-							   PGC_SUSET,
-							   GUC_NOT_IN_SAMPLE,
-							   NULL,
-							   NULL,
-							   NULL);
+    DefineCustomStringVariable("pginstall.archive_dir",
+                               "Path where to download extension archives.",
+                               "",
+                               &pginstall_archive_dir,
+                               "",
+                               PGC_SUSET,
+                               GUC_NOT_IN_SAMPLE,
+                               NULL,
+                               NULL,
+                               NULL);
 
-	DefineCustomStringVariable("pginstall.control_dir",
-							   "Path where to install extension control files.",
-							   "",
-							   &pginstall_control_dir,
-							   default_control_directory,
-							   PGC_SUSET,
-							   GUC_NOT_IN_SAMPLE,
-							   NULL,
-							   NULL,
-							   NULL);
+    DefineCustomStringVariable("pginstall.control_dir",
+                               "Path where to install extension control files.",
+                               "",
+                               &pginstall_control_dir,
+                               default_control_directory,
+                               PGC_SUSET,
+                               GUC_NOT_IN_SAMPLE,
+                               NULL,
+                               NULL,
+                               NULL);
 
-	DefineCustomStringVariable("pginstall.extension_dir",
-							   "Path where to install extension contents.",
-							   "",
-							   &pginstall_extension_dir,
-							   "",
-							   PGC_SUSET,
-							   GUC_NOT_IN_SAMPLE,
-							   NULL,
-							   NULL,
-							   NULL);
+    DefineCustomStringVariable("pginstall.extension_dir",
+                               "Path where to install extension contents.",
+                               "",
+                               &pginstall_extension_dir,
+                               "",
+                               PGC_SUSET,
+                               GUC_NOT_IN_SAMPLE,
+                               NULL,
+                               NULL,
+                               NULL);
 
-	DefineCustomStringVariable("pginstall.repository",
-							   "Extension Repository URL",
-							   "",
-							   &pginstall_repository,
-							   "",
-							   PGC_SUSET,
-							   GUC_NOT_IN_SAMPLE,
-							   NULL,
-							   NULL,
-							   NULL);
+    DefineCustomStringVariable("pginstall.repository",
+                               "Extension Repository URL",
+                               "",
+                               &pginstall_repository,
+                               "",
+                               PGC_SUSET,
+                               GUC_NOT_IN_SAMPLE,
+                               NULL,
+                               NULL,
+                               NULL);
 
-	DefineCustomStringVariable("pginstall.custom_path",
-							   "Directory where to load custom scripts from",
-							   "",
-							   &pginstall_custom_path,
-							   "",
-							   PGC_SUSET,
-							   GUC_NOT_IN_SAMPLE,
-							   NULL,
-							   NULL,
-							   NULL);
+    DefineCustomStringVariable("pginstall.custom_path",
+                               "Directory where to load custom scripts from",
+                               "",
+                               &pginstall_custom_path,
+                               "",
+                               PGC_SUSET,
+                               GUC_NOT_IN_SAMPLE,
+                               NULL,
+                               NULL,
+                               NULL);
 
-	DefineCustomStringVariable("pginstall.whitelist",
-							   "List of extensions that are whitelisted",
-							   "Separated by comma",
-							   &pginstall_whitelist,
-							   "",
-							   PGC_SUSET,
-							   GUC_NOT_IN_SAMPLE,
-							   NULL,
-							   NULL,
-							   NULL);
+    DefineCustomStringVariable("pginstall.whitelist",
+                               "List of extensions that are whitelisted",
+                               "Separated by comma",
+                               &pginstall_whitelist,
+                               "",
+                               PGC_SUSET,
+                               GUC_NOT_IN_SAMPLE,
+                               NULL,
+                               NULL,
+                               NULL);
 
-	DefineCustomBoolVariable("pginstall.sudo",
-							 "Allow privilege escalation to install extensions",
-							 "",
-							 &pginstall_sudo,
-							 false,
-							 PGC_SUSET,
-							 GUC_NOT_IN_SAMPLE,
-							 NULL,
-							 NULL,
-							 NULL);
+    DefineCustomBoolVariable("pginstall.sudo",
+                             "Allow privilege escalation to install extensions",
+                             "",
+                             &pginstall_sudo,
+                             false,
+                             PGC_SUSET,
+                             GUC_NOT_IN_SAMPLE,
+                             NULL,
+                             NULL,
+                             NULL);
 
-	prev_ProcessUtility = ProcessUtility_hook;
-	ProcessUtility_hook = pginstall_ProcessUtility;
+    prev_ProcessUtility = ProcessUtility_hook;
+    ProcessUtility_hook = pginstall_ProcessUtility;
 }
 
 /*
@@ -203,8 +203,8 @@ _PG_init(void)
 void
 _PG_fini(void)
 {
-	/* Uninstall hook */
-	ProcessUtility_hook = prev_ProcessUtility;
+    /* Uninstall hook */
+    ProcessUtility_hook = prev_ProcessUtility;
 }
 
 /*
@@ -225,59 +225,59 @@ _PG_fini(void)
  */
 static void
 call_extension_scripts(const char *extname,
-					   const char *schema,
-					   const char *action,
-					   const char *when,
-					   const char *from_version,
-					   const char *version)
+                       const char *schema,
+                       const char *action,
+                       const char *when,
+                       const char *from_version,
+                       const char *version)
 {
-	char *specific_custom_script =
-		get_specific_custom_script_filename(extname, when,
-											from_version, version);
+    char *specific_custom_script =
+        get_specific_custom_script_filename(extname, when,
+                                            from_version, version);
 
-	char *generic_custom_script =
-		get_generic_custom_script_filename(extname, action, when);
+    char *generic_custom_script =
+        get_generic_custom_script_filename(extname, action, when);
 
-	elog(DEBUG1, "Considering custom script \"%s\"", specific_custom_script);
-	elog(DEBUG1, "Considering custom script \"%s\"", generic_custom_script);
+    elog(DEBUG1, "Considering custom script \"%s\"", specific_custom_script);
+    elog(DEBUG1, "Considering custom script \"%s\"", generic_custom_script);
 
-	if (access(specific_custom_script, F_OK) == 0)
-		execute_custom_script(specific_custom_script, schema);
+    if (access(specific_custom_script, F_OK) == 0)
+        execute_custom_script(specific_custom_script, schema);
 
-	else if (access(generic_custom_script, F_OK) == 0)
-		execute_custom_script(generic_custom_script, schema);
+    else if (access(generic_custom_script, F_OK) == 0)
+        execute_custom_script(generic_custom_script, schema);
 }
 
 static bool
 extension_is_whitelisted(const char *name)
 {
-	bool        whitelisted = false;
-	char       *rawnames = pstrdup(pginstall_whitelist);
-	List       *extensions;
-	ListCell   *lc;
+    bool        whitelisted = false;
+    char       *rawnames = pstrdup(pginstall_whitelist);
+    List       *extensions;
+    ListCell   *lc;
 
-	if (pginstall_whitelist == NULL)
-		/* no whitelisting is in place */
-		return true;
+    if (pginstall_whitelist == NULL)
+        /* no whitelisting is in place */
+        return true;
 
-	if (!SplitIdentifierString(rawnames, ',', &extensions))
-	{
-		/* syntax error in extension name list */
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("parameter \"pginstall.whitelist\" must be a list of extension names")));
-	}
-	foreach(lc, extensions)
-	{
-		char *curext = (char *) lfirst(lc);
+    if (!SplitIdentifierString(rawnames, ',', &extensions))
+    {
+        /* syntax error in extension name list */
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("parameter \"pginstall.whitelist\" must be a list of extension names")));
+    }
+    foreach(lc, extensions)
+    {
+        char *curext = (char *) lfirst(lc);
 
-		if (!strcmp(name, curext))
-		{
-			whitelisted = true;
-			break;
-		}
-	}
-	return whitelisted;
+        if (!strcmp(name, curext))
+        {
+            whitelisted = true;
+            break;
+        }
+    }
+    return whitelisted;
 }
 
 /*
@@ -286,112 +286,112 @@ extension_is_whitelisted(const char *name)
 static void
 pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
 {
-	char	*name = NULL;
-	char    *schema = NULL;
-	char    *old_version = NULL;
-	char    *new_version = NULL;
+    char    *name = NULL;
+    char    *schema = NULL;
+    char    *old_version = NULL;
+    char    *new_version = NULL;
 
-	switch (nodeTag(parsetree))
-	{
-		case T_CreateExtensionStmt:
-		{
-			PlatformData platform;
-			CreateExtensionStmt *stmt = (CreateExtensionStmt *)parsetree;
-			name = stmt->extname;
+    switch (nodeTag(parsetree))
+    {
+        case T_CreateExtensionStmt:
+        {
+            PlatformData platform;
+            CreateExtensionStmt *stmt = (CreateExtensionStmt *)parsetree;
+            name = stmt->extname;
 
-			/* See if we need to download an archive for asked extension */
-			current_platform(&platform);
-			maybe_unpack_archive(name, &platform);
+            /* See if we need to download an archive for asked extension */
+            current_platform(&platform);
+            maybe_unpack_archive(name, &platform);
 
-			/* the Extension should be available now.  */
-			fill_in_extension_properties(name, stmt->options,
-										 &schema, &old_version, &new_version);
+            /* the Extension should be available now.  */
+            fill_in_extension_properties(name, stmt->options,
+                                         &schema, &old_version, &new_version);
 
-			if (superuser())
-			{
-				call_RawProcessUtility(PROCESS_UTILITY_ARGS);
-				return;
-			}
-			if (extension_is_whitelisted(name))
-			{
-				call_ProcessUtility(PROCESS_UTILITY_ARGS,
-									name, schema,
-									old_version, new_version, "create");
-				return;
-			}
-			break;
-		}
+            if (superuser())
+            {
+                call_RawProcessUtility(PROCESS_UTILITY_ARGS);
+                return;
+            }
+            if (extension_is_whitelisted(name))
+            {
+                call_ProcessUtility(PROCESS_UTILITY_ARGS,
+                                    name, schema,
+                                    old_version, new_version, "create");
+                return;
+            }
+            break;
+        }
 
-		case T_AlterExtensionStmt:
-		{
-			AlterExtensionStmt *stmt = (AlterExtensionStmt *)parsetree;
-			name = stmt->extname;
-			fill_in_extension_properties(name, stmt->options,
-										 &schema, &old_version, &new_version);
+        case T_AlterExtensionStmt:
+        {
+            AlterExtensionStmt *stmt = (AlterExtensionStmt *)parsetree;
+            name = stmt->extname;
+            fill_in_extension_properties(name, stmt->options,
+                                         &schema, &old_version, &new_version);
 
-			/* fetch old_version from the catalogs, actually */
-			old_version = get_extension_current_version(name);
+            /* fetch old_version from the catalogs, actually */
+            old_version = get_extension_current_version(name);
 
-			if (extension_is_whitelisted(name))
-			{
-				call_ProcessUtility(PROCESS_UTILITY_ARGS,
-									name, schema,
-									old_version, new_version, "update");
-				return;
-			}
-			break;
-		}
+            if (extension_is_whitelisted(name))
+            {
+                call_ProcessUtility(PROCESS_UTILITY_ARGS,
+                                    name, schema,
+                                    old_version, new_version, "update");
+                return;
+            }
+            break;
+        }
 
-		case T_DropStmt:
-			if (((DropStmt *)parsetree)->removeType == OBJECT_EXTENSION)
-			{
-				/* DROP EXTENSION can target several of them at once */
-				bool all_in_whitelist = true;
-				ListCell *lc;
+        case T_DropStmt:
+            if (((DropStmt *)parsetree)->removeType == OBJECT_EXTENSION)
+            {
+                /* DROP EXTENSION can target several of them at once */
+                bool all_in_whitelist = true;
+                ListCell *lc;
 
-				foreach(lc, ((DropStmt *)parsetree)->objects)
-				{
-					/*
-					 * For deconstructing the object list into actual names,
-					 * see the get_object_address_unqualified() function in
-					 * src/backend/catalog/objectaddress.c
-					 */
-					bool whitelisted = false;
-					List *objname = lfirst(lc);
-					name = strVal(linitial(objname));
+                foreach(lc, ((DropStmt *)parsetree)->objects)
+                {
+                    /*
+                     * For deconstructing the object list into actual names,
+                     * see the get_object_address_unqualified() function in
+                     * src/backend/catalog/objectaddress.c
+                     */
+                    bool whitelisted = false;
+                    List *objname = lfirst(lc);
+                    name = strVal(linitial(objname));
 
-					whitelisted = extension_is_whitelisted(name);
-					all_in_whitelist = all_in_whitelist && whitelisted;
-				}
+                    whitelisted = extension_is_whitelisted(name);
+                    all_in_whitelist = all_in_whitelist && whitelisted;
+                }
 
-				/*
-				 * If we have a mix of whitelisted and non-whitelisted
-				 * extensions in a single DROP EXTENSION command, better play
-				 * safe and do the DROP without superpowers.
-				 *
-				 * So we only give superpowers when all extensions are in the
-				 * whitelist.
-				 */
-				if (all_in_whitelist)
-				{
-					call_ProcessUtility(PROCESS_UTILITY_ARGS,
-										NULL, NULL, NULL, NULL, NULL);
-					return;
-				}
-			}
-			break;
+                /*
+                 * If we have a mix of whitelisted and non-whitelisted
+                 * extensions in a single DROP EXTENSION command, better play
+                 * safe and do the DROP without superpowers.
+                 *
+                 * So we only give superpowers when all extensions are in the
+                 * whitelist.
+                 */
+                if (all_in_whitelist)
+                {
+                    call_ProcessUtility(PROCESS_UTILITY_ARGS,
+                                        NULL, NULL, NULL, NULL, NULL);
+                    return;
+                }
+            }
+            break;
 
-			/* We intentionnaly don't support that command. */
-		case T_AlterExtensionContentsStmt:
-		default:
-			break;
-	}
+            /* We intentionnaly don't support that command. */
+        case T_AlterExtensionContentsStmt:
+        default:
+            break;
+    }
 
-	/*
-	 * We can only fall here if we don't want to support the command, so pass
-	 * control over to the usual processing.
-	 */
-	call_RawProcessUtility(PROCESS_UTILITY_ARGS);
+    /*
+     * We can only fall here if we don't want to support the command, so pass
+     * control over to the usual processing.
+     */
+    call_RawProcessUtility(PROCESS_UTILITY_ARGS);
 }
 
 /*
@@ -400,40 +400,40 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
  */
 static void
 call_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS,
-					const char *name,
-					const char *schema,
-					const char *old_version,
-					const char *new_version,
-					const char *action)
+                    const char *name,
+                    const char *schema,
+                    const char *old_version,
+                    const char *new_version,
+                    const char *action)
 {
-	Oid			save_userid;
-	int			save_sec_context;
+    Oid         save_userid;
+    int         save_sec_context;
 
-	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+    GetUserIdAndSecContext(&save_userid, &save_sec_context);
 
-	SetUserIdAndSecContext(BOOTSTRAP_SUPERUSERID,
-						   save_sec_context
-						   | SECURITY_LOCAL_USERID_CHANGE
-						   | SECURITY_RESTRICTED_OPERATION);
+    SetUserIdAndSecContext(BOOTSTRAP_SUPERUSERID,
+                           save_sec_context
+                           | SECURITY_LOCAL_USERID_CHANGE
+                           | SECURITY_RESTRICTED_OPERATION);
 
-	if (action)
-		call_extension_scripts(name, schema, action,
-							   "before", old_version, new_version);
+    if (action)
+        call_extension_scripts(name, schema, action,
+                               "before", old_version, new_version);
 
-	call_RawProcessUtility(PROCESS_UTILITY_ARGS);
+    call_RawProcessUtility(PROCESS_UTILITY_ARGS);
 
-	if (action)
-		call_extension_scripts(name, schema, action,
-							   "after", old_version, new_version);
+    if (action)
+        call_extension_scripts(name, schema, action,
+                               "after", old_version, new_version);
 
-	SetUserIdAndSecContext(save_userid, save_sec_context);
+    SetUserIdAndSecContext(save_userid, save_sec_context);
 }
 
 static void
 call_RawProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
 {
-	if (prev_ProcessUtility)
-		prev_ProcessUtility(PROCESS_UTILITY_ARGS);
-	else
-		standard_ProcessUtility(PROCESS_UTILITY_ARGS);
+    if (prev_ProcessUtility)
+        prev_ProcessUtility(PROCESS_UTILITY_ARGS);
+    else
+        standard_ProcessUtility(PROCESS_UTILITY_ARGS);
 }

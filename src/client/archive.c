@@ -33,28 +33,28 @@ static int copy_data(struct archive *ar, struct archive *aw);
 void
 maybe_unpack_archive(const char *extname, Platform platform)
 {
-	char *control_filename = get_extension_control_filename(extname);
-	char *archive_filename;
+    char *control_filename = get_extension_control_filename(extname);
+    char *archive_filename;
 
-	if (access(control_filename, F_OK) == 0)
-		return;
+    if (access(control_filename, F_OK) == 0)
+        return;
 
-	archive_filename = psprintf("%s/%s--%s--%s--%s--%s.tar.gz",
-								pginstall_archive_dir,
-								extname,
-								PG_VERSION,
-								platform->os_name,
-								platform->os_version,
-								platform->arch);
+    archive_filename = psprintf("%s/%s--%s--%s--%s--%s.tar.gz",
+                                pginstall_archive_dir,
+                                extname,
+                                PG_VERSION,
+                                platform->os_name,
+                                platform->os_version,
+                                platform->arch);
 
-	if (access(archive_filename, R_OK) == 0)
-	{
-		extract(extname, archive_filename);
+    if (access(archive_filename, R_OK) == 0)
+    {
+        extract(extname, archive_filename);
 
-		/* now rewrite the control file to "relocate" the extension */
-		rewrite_control_file(extname, control_filename);
-	}
-	return;
+        /* now rewrite the control file to "relocate" the extension */
+        rewrite_control_file(extname, control_filename);
+    }
+    return;
 }
 
 /*
@@ -69,13 +69,13 @@ maybe_unpack_archive(const char *extname, Platform platform)
  */
 static char *
 compute_target_path(const char *filename,
-					const char *control_filename,
-					int control_filename_len)
+                    const char *control_filename,
+                    int control_filename_len)
 {
-	if (strncmp(filename, control_filename, control_filename_len) == 0)
-		return psprintf("%s/%s", pginstall_control_dir, filename);
-	else
-		return psprintf("%s/%s", pginstall_extension_dir, filename);
+    if (strncmp(filename, control_filename, control_filename_len) == 0)
+        return psprintf("%s/%s", pginstall_control_dir, filename);
+    else
+        return psprintf("%s/%s", pginstall_extension_dir, filename);
 }
 
 /*
@@ -85,109 +85,109 @@ compute_target_path(const char *filename,
 void
 extract(const char *extname, const char *filename)
 {
-	struct archive *a;
-	struct archive *ext;
-	struct archive_entry *entry;
-	int flags = ARCHIVE_EXTRACT_TIME;
-	int r;
+    struct archive *a;
+    struct archive *ext;
+    struct archive_entry *entry;
+    int flags = ARCHIVE_EXTRACT_TIME;
+    int r;
 
-	char *control_filename = psprintf("%s.control", extname);
-	int cflen = strlen(control_filename);
+    char *control_filename = psprintf("%s.control", extname);
+    int cflen = strlen(control_filename);
 
-	a = archive_read_new();
-	ext = archive_write_disk_new();
-	archive_write_disk_set_options(ext, flags);
+    a = archive_read_new();
+    ext = archive_write_disk_new();
+    archive_write_disk_set_options(ext, flags);
 
-	/*
-	 * Do we care enough about the .so size to limit ourselves here? We might
-	 * want to reconsider and use archive_read_support_format_all() and
-	 * archive_read_support_filter_all() rather than just tar.gz.
-	 */
-	archive_read_support_format_tar(a);
-	archive_read_support_filter_gzip(a);
+    /*
+     * Do we care enough about the .so size to limit ourselves here? We might
+     * want to reconsider and use archive_read_support_format_all() and
+     * archive_read_support_filter_all() rather than just tar.gz.
+     */
+    archive_read_support_format_tar(a);
+    archive_read_support_filter_gzip(a);
 
-	if ((archive_read_open_filename(a, filename, 10240)))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("Failed to open archive \"%s\"", filename),
-				 errdetail("%s", archive_error_string(a))));
+    if ((archive_read_open_filename(a, filename, 10240)))
+        ereport(ERROR,
+                (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+                 errmsg("Failed to open archive \"%s\"", filename),
+                 errdetail("%s", archive_error_string(a))));
 
-	elog(DEBUG1, "Unpacking archive \"%s\"", filename);
+    elog(DEBUG1, "Unpacking archive \"%s\"", filename);
 
-	for (;;)
-	{
-		char *path;
-		struct archive_entry *target;
+    for (;;)
+    {
+        char *path;
+        struct archive_entry *target;
 
-		r = archive_read_next_header(a, &entry);
-		if (r == ARCHIVE_EOF)
-			break;
+        r = archive_read_next_header(a, &entry);
+        if (r == ARCHIVE_EOF)
+            break;
 
-		if (r != ARCHIVE_OK)
-			ereport(ERROR,
-					(errcode(ERRCODE_UNDEFINED_FILE),
-					 errmsg("%s", archive_error_string(a))));
+        if (r != ARCHIVE_OK)
+            ereport(ERROR,
+                    (errcode(ERRCODE_UNDEFINED_FILE),
+                     errmsg("%s", archive_error_string(a))));
 
-		target = archive_entry_clone(entry);
-		path   = (char *)archive_entry_pathname(target);
-		path   = (char *)compute_target_path(path, control_filename, cflen);
-		archive_entry_set_pathname(target, path);
+        target = archive_entry_clone(entry);
+        path   = (char *)archive_entry_pathname(target);
+        path   = (char *)compute_target_path(path, control_filename, cflen);
+        archive_entry_set_pathname(target, path);
 
-		elog(DEBUG1, "Extracting \"%s\" to \"%s\"",
-			 archive_entry_pathname(entry), path);
+        elog(DEBUG1, "Extracting \"%s\" to \"%s\"",
+             archive_entry_pathname(entry), path);
 
-		r = archive_write_header(ext, target);
+        r = archive_write_header(ext, target);
 
-		if (r != ARCHIVE_OK)
-			ereport(WARNING,
-					(errcode(ERRCODE_IO_ERROR),
-					 errmsg("%s", archive_error_string(ext))));
-		else
-		{
-			copy_data(a, ext);
-			r = archive_write_finish_entry(ext);
-			if (r != ARCHIVE_OK)
-				ereport(ERROR,
-						(errcode(ERRCODE_IO_ERROR),
-						 errmsg("%s", archive_error_string(ext))));
-		}
-		archive_entry_free(target);
-	}
+        if (r != ARCHIVE_OK)
+            ereport(WARNING,
+                    (errcode(ERRCODE_IO_ERROR),
+                     errmsg("%s", archive_error_string(ext))));
+        else
+        {
+            copy_data(a, ext);
+            r = archive_write_finish_entry(ext);
+            if (r != ARCHIVE_OK)
+                ereport(ERROR,
+                        (errcode(ERRCODE_IO_ERROR),
+                         errmsg("%s", archive_error_string(ext))));
+        }
+        archive_entry_free(target);
+    }
 
-	archive_read_close(a);
-	archive_read_free(a);
+    archive_read_close(a);
+    archive_read_free(a);
 }
 
 static int
 copy_data(struct archive *ar, struct archive *aw)
 {
-	int r;
-	const void *buff;
-	size_t size;
+    int r;
+    const void *buff;
+    size_t size;
 #if ARCHIVE_VERSION >= 3000000
-	int64_t offset;
+    int64_t offset;
 #else
-	off_t offset;
+    off_t offset;
 #endif
 
-	for (;;)
-	{
-		r = archive_read_data_block(ar, &buff, &size, &offset);
+    for (;;)
+    {
+        r = archive_read_data_block(ar, &buff, &size, &offset);
 
-		if (r == ARCHIVE_EOF)
-			return ARCHIVE_OK;
+        if (r == ARCHIVE_EOF)
+            return ARCHIVE_OK;
 
-		if (r != ARCHIVE_OK)
-			return r;
+        if (r != ARCHIVE_OK)
+            return r;
 
-		r = archive_write_data_block(aw, buff, size, offset);
+        r = archive_write_data_block(aw, buff, size, offset);
 
-		if (r != ARCHIVE_OK)
-		{
-			ereport(WARNING,
-					(errcode(ERRCODE_IO_ERROR),
-					 errmsg("%s", archive_error_string(aw))));
-			return r;
-		}
-	}
+        if (r != ARCHIVE_OK)
+        {
+            ereport(WARNING,
+                    (errcode(ERRCODE_IO_ERROR),
+                     errmsg("%s", archive_error_string(aw))));
+            return r;
+        }
+    }
 }
