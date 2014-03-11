@@ -34,7 +34,7 @@ static char *escape_filename(const char *str);
  * directly uses the local archive cache.
  */
 void
-maybe_unpack_archive(const char *extname)
+download_and_unpack_archive(const char *extname)
 {
     PlatformData platform;
     char *control_filename = get_extension_control_filename(extname);

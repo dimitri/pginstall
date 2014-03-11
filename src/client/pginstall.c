@@ -300,15 +300,15 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
             CreateExtensionStmt *stmt = (CreateExtensionStmt *)parsetree;
             name = stmt->extname;
 
-            /* See if we need to download an archive for asked extension */
-            maybe_unpack_archive(name);
+            /* first refresh our files */
+            download_and_unpack_archive(name);
 
             if (superuser())
             {
                 call_RawProcessUtility(PROCESS_UTILITY_ARGS);
                 return;
             }
-            if (extension_is_whitelisted(name))
+            if (pginstall_sudo && extension_is_whitelisted(name))
             {
                 /* the Extension should be available now.  */
                 fill_in_extension_properties(name, stmt->options, &schema,
@@ -326,14 +326,23 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
         {
             AlterExtensionStmt *stmt = (AlterExtensionStmt *)parsetree;
             name = stmt->extname;
-            fill_in_extension_properties(name, stmt->options,
-                                         &schema, &old_version, &new_version);
 
-            /* fetch old_version from the catalogs, actually */
-            old_version = get_extension_current_version(name);
+            /* first refresh our files */
+            download_and_unpack_archive(name);
 
-            if (extension_is_whitelisted(name))
+            if (superuser())
             {
+                call_RawProcessUtility(PROCESS_UTILITY_ARGS);
+                return;
+            }
+            if (pginstall_sudo && extension_is_whitelisted(name))
+            {
+                fill_in_extension_properties(name, stmt->options, &schema,
+                                             &old_version, &new_version);
+
+                /* fetch old_version from the catalogs, actually */
+                old_version = get_extension_current_version(name);
+
                 call_ProcessUtility(PROCESS_UTILITY_ARGS,
                                     name, schema,
                                     old_version, new_version, "update");
@@ -343,6 +352,12 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
         }
 
         case T_DropStmt:
+        {
+            if (superuser())
+            {
+                call_RawProcessUtility(PROCESS_UTILITY_ARGS);
+                return;
+            }
             if (((DropStmt *)parsetree)->removeType == OBJECT_EXTENSION)
             {
                 /* DROP EXTENSION can target several of them at once */
@@ -372,7 +387,7 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
                  * So we only give superpowers when all extensions are in the
                  * whitelist.
                  */
-                if (all_in_whitelist)
+                if (pginstall_sudo && all_in_whitelist)
                 {
                     call_ProcessUtility(PROCESS_UTILITY_ARGS,
                                         NULL, NULL, NULL, NULL, NULL);
@@ -380,6 +395,7 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
                 }
             }
             break;
+        }
 
             /* We intentionnaly don't support that command. */
         case T_AlterExtensionContentsStmt:
