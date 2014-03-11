@@ -31,21 +31,23 @@ static int copy_data(struct archive *ar, struct archive *aw);
  * directly uses the local archive cache.
  */
 void
-maybe_unpack_archive(const char *extname, Platform platform)
+maybe_unpack_archive(const char *extname)
 {
+    PlatformData platform;
     char *control_filename = get_extension_control_filename(extname);
     char *archive_filename;
 
     if (access(control_filename, F_OK) == 0)
         return;
 
+    current_platform(&platform);
     archive_filename = psprintf("%s/%s--%s--%s--%s--%s.tar.gz",
                                 pginstall_archive_dir,
                                 extname,
                                 PG_VERSION,
-                                platform->os_name,
-                                platform->os_version,
-                                platform->arch);
+                                platform.os_name,
+                                platform.os_version,
+                                platform.arch);
 
     if (access(archive_filename, R_OK) == 0)
     {

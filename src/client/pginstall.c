@@ -295,17 +295,11 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
     {
         case T_CreateExtensionStmt:
         {
-            PlatformData platform;
             CreateExtensionStmt *stmt = (CreateExtensionStmt *)parsetree;
             name = stmt->extname;
 
             /* See if we need to download an archive for asked extension */
-            current_platform(&platform);
-            maybe_unpack_archive(name, &platform);
-
-            /* the Extension should be available now.  */
-            fill_in_extension_properties(name, stmt->options,
-                                         &schema, &old_version, &new_version);
+            maybe_unpack_archive(name);
 
             if (superuser())
             {
@@ -314,6 +308,10 @@ pginstall_ProcessUtility(PROCESS_UTILITY_PROTO_ARGS)
             }
             if (extension_is_whitelisted(name))
             {
+                /* the Extension should be available now.  */
+                fill_in_extension_properties(name, stmt->options, &schema,
+                                             &old_version, &new_version);
+
                 call_ProcessUtility(PROCESS_UTILITY_ARGS,
                                     name, schema,
                                     old_version, new_version, "create");

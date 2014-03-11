@@ -156,7 +156,6 @@ parse_osx_name_and_version(Platform platform)
             char *first = strchr(line, '>') + 1;
             char *last  = strchr(first, '<') - 1;
             char *value = (char *)palloc0(last-first+2);
-            char *p;
 
             memcpy(value, first, last-first+1);
 
