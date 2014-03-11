@@ -169,6 +169,8 @@ rewrite_control_file(const char *extname, const char *control_filename)
                         temp_control_filename)));
     }
 
+    elog(DEBUG1, "Rewriting control file \"%s\"", control_filename);
+
     /*
      * Convert the ConfigVariable list into ExtensionControlFile entries, we
      * are only interested into the default version.

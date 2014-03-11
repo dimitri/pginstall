@@ -29,5 +29,8 @@ typedef struct
 } pginstall_extension;
 
 List *list_available_extensions(Platform platform);
+void download_archive(const char *filename,
+					  const char *extname,
+					  Platform platform);
 
 #endif

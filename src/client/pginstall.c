@@ -256,9 +256,11 @@ extension_is_whitelisted(const char *name)
     List       *extensions;
     ListCell   *lc;
 
-    if (pginstall_whitelist == NULL)
-        /* no whitelisting is in place */
+    if (pginstall_whitelist == NULL || strcmp("", pginstall_whitelist) == 0)
+    {
+        /* no whitelisting is in place: default to accept policy */
         return true;
+    }
 
     if (!SplitIdentifierString(rawnames, ',', &extensions))
     {

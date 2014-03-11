@@ -9,6 +9,7 @@
  */
 
 #include "archive.h"
+#include "communicate.h"
 #include "platform.h"
 #include "pginstall.h"
 #include "utils.h"
@@ -19,6 +20,8 @@
 #include "postgres.h"
 
 static int copy_data(struct archive *ar, struct archive *aw);
+
+static char *escape_filename(const char *str);
 
 /*
  * At CREATE EXTENSION time we check if the extension is already available,
@@ -37,18 +40,37 @@ maybe_unpack_archive(const char *extname)
     char *control_filename = get_extension_control_filename(extname);
     char *archive_filename;
 
-    if (access(control_filename, F_OK) == 0)
-        return;
-
+    /*
+     * No cache, download again each time asked: any existing control file for
+     * the extension could be one we left behind from a previous version of the
+     * extension's archive.
+     *
+     * This also means that if an extension is already provided by the
+     * operating system, by installing pginstall you give preference to
+     * pginstall builds.
+     */
     current_platform(&platform);
     archive_filename = psprintf("%s/%s--%s--%s--%s--%s.tar.gz",
                                 pginstall_archive_dir,
                                 extname,
                                 PG_VERSION,
-                                platform.os_name,
-                                platform.os_version,
-                                platform.arch);
+                                escape_filename(platform.os_name),
+                                escape_filename(platform.os_version),
+                                escape_filename(platform.arch));
 
+    /* Always try to download the newest known archive file */
+    download_archive(archive_filename, extname, &platform);
+
+    /*
+     * Even if we didn't find any extension's archive file for our platform on
+     * the repository server, it could be that the extension is available
+     * locally either through the OS packages or maybe a local developer setup
+     * (make install).
+     *
+     * In case when when extension control file still doesn't exists after
+     * we've been communicating with the repository server, PostgreSQL will
+     * issue its usual error message about a missing control file.
+     */
     if (access(archive_filename, R_OK) == 0)
     {
         extract(extname, archive_filename);
@@ -192,4 +214,25 @@ copy_data(struct archive *ar, struct archive *aw)
             return r;
         }
     }
+}
+
+/*
+ * Our platform details might include non filename compatible characters, such
+ * as spaces. We clean up the name components here.
+ *
+ * Currently only handles space-to-underscore conversion, so we know the length
+ * of the result string to be the same as which of the source string.
+ */
+static char *
+escape_filename(const char *str)
+{
+    int i, len = strlen(str);
+    char *result = pstrdup(str);
+
+    for(i=0; i<len; i++)
+    {
+        if (result[i] == ' ')
+            result[i] = '_';
+    }
+    return result;
 }

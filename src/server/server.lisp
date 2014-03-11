@@ -159,4 +159,5 @@
          (version   (hunchentoot:url-decode version))
          (arch      (hunchentoot:url-decode arch))
          (pathname  (archive-pathname extension pgversion os version arch)))
-    (hunchentoot:handle-static-file pathname "application/octet-stream")))
+    (when (and pathname (probe-file pathname))
+      (hunchentoot:handle-static-file pathname "application/octet-stream"))))
