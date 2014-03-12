@@ -45,7 +45,7 @@
      :else :collect query-or-parameter :into query
 
      :finally (return (list :query query
-                            :parameters (alexandria:plist-alist parameters))))))
+                            :parameters (alexandria:plist-alist parameters)))))
 
 (defun post-repo-server (&rest query-and-parameters)
   "Send a :POST query to the repository server with KEY-VALUE-PAIRS

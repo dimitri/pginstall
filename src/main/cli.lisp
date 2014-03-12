@@ -20,7 +20,7 @@
      ("start"   . server-start)
      ("stop"    . server-stop)
      ("status"  . server-status)
-     ("reload"  . server-config)
+     ("config"  . server-config)
      ("reload"  . server-reload)
      ("restart" . server-restart))
 
@@ -31,8 +31,7 @@
      (("pg" "add") . animal-add-pgconfig)
      ;; (("pg" "rm")  . animal-remove-pgconfig)
      ("register"   . animal-register)
-     ("build"      . animal-build)
-     ("upload"     . animal-upload))
+     ("build"      . animal-build))
 
     ("extension"
      ("ls"              . extension-list)
@@ -104,7 +103,6 @@
                 (cli-error-message e)
                 (cli-error-detail e)
                 (cli-error-hint e)))
-
       (server-error (e)
         (format t
                 "ERROR ~d ON ~a~%~@[REASON: ~a~%~]~@[BODY: ~a~%~]"
@@ -131,16 +129,19 @@
 (defun server-start ())
 (defun server-stop ())
 
-(defun server-status ()
+(defun server-status (command &rest args)
   "Query the server over HTTP on the /api/status URL, expecting \"OK\" back."
+  (declare (ignore command args))
   (query-repo-server 'status))
 
-(defun server-reload ()
+(defun server-reload (command &rest args)
   "Have the server reload its configuration and return it to us."
+  (declare (ignore command args))
   (query-repo-server 'reload))
 
-(defun server-config ()
+(defun server-config (command &rest args)
   "Display current server's configuration."
+  (declare (ignore command args))
   (query-repo-server 'config))
 
 
@@ -168,6 +169,11 @@
   (declare (ignore pg add args))
   (add-pgconfig-on-server path))
 
+(defun animal-build (command &rest args)
+  "Check the build queue to see if there's any work to do, and do it. Once."
+  (declare (ignore command args))
+  (build-extension-for-server))
+
 
 ;;;
 ;;; The extension CLI
@@ -184,3 +190,8 @@
                     :fullname fullname
                     :uri uri
                     :description description))
+
+(defun extension-queue-build (queue build extension-name)
+  "Ask the repository server to queue a build for given EXTENSION-NAME."
+  (declare (ignore queue build))
+  (query-repo-server 'build extension-name))

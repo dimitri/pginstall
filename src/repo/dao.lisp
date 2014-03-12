@@ -204,8 +204,8 @@
 
 (defmethod print-object ((buildlog build-log) stream)
   (print-unreadable-object (buildlog stream :type t :identity t)
-    (let ((id (when (slot-boundp buildlog 'id) (build-log-id build-log))))
-      (with-slots (extension animal result when) build-log
+    (let ((id (when (slot-boundp buildlog 'id) (build-log-id buildlog))))
+      (with-slots (extension animal result when) buildlog
         (format stream "~a ~a ~a [~a] <~a>" id extension animal result when)))))
 
 

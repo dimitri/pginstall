@@ -2,6 +2,8 @@
 ;;; The Buildfarm Animal gets is orders from the Repository Server
 ;;;
 
+(in-package #:pginstall.animal)
+
 (defun parse-archive (json)
   "Given a JSON string representing an archive DAO object, returns a proper
    CLOS object."
