@@ -71,8 +71,15 @@
            #:archive-pgversion
            #:archive-filename
 
-           ;; Now, the API
+           ;; the Main API
            #:select-star
+
+           ;; the Animal API
+           #:register-animal
+           #:add-pg-config
+           #:list-pg-configs
+
+           ;; the Extension API
            #:queue-extension-build
            #:queue-get-work
            #:select-extensions-available-on-platform

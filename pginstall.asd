@@ -21,6 +21,7 @@
                  #:hunchentoot          ; http server
                  #:yason                ; JSON routines
                  #:closer-mop           ; introspection
+                 #:daemon               ; run the repo server in the background
 		 )
     :components
     ((:module "lib"
@@ -47,19 +48,19 @@
 			((:file "package")
                          (:file "dao"   :depends-on ("package"))
                          (:file "api"   :depends-on ("package" "dao"))
+                         (:file "api-extension"   :depends-on ("package" "dao"))
+                         (:file "api-animal"      :depends-on ("package" "dao"))
                          (:file "pgxn"  :depends-on ("package" "dao"))
 			 (:file "setup" :depends-on ("package" "dao"))))
                (:module animal
                         :depends-on ("common" "repo")
                         :components
                         ((:file "package")
-                         (:file "animal"  :depends-on ("package"))
                          (:file "archive" :depends-on ("package"))
                          (:file "build"  :depends-on ("package"
-                                                      "archive"
-                                                      "animal"))
+                                                      "archive"))
                          (:file "json"   :depends-on ("package"))
-                         (:file "client" :depends-on ("package"
+                         (:file "animal" :depends-on ("package"
                                                       "build"
                                                       "json"
                                                       "archive"))))
@@ -68,5 +69,11 @@
 			:components
 			((:file "package")
                          (:file "json" :depends-on ("package"))
-			 (:file "server" :depends-on ("package" "json"))))))))
+			 (:file "server" :depends-on ("package" "json"))))
+
+               (:module main
+                        :depends-on ("common" "config" "repo" "animal" "server")
+                        :components
+                        ((:file "package")
+                         (:file "cli" :depends-on ("package"))))))))
 

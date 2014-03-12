@@ -202,7 +202,7 @@
   (:table-name buildlog)
   (:keys id))
 
-(defmethod print-object ((build-log buildlog) stream)
+(defmethod print-object ((buildlog build-log) stream)
   (print-unreadable-object (buildlog stream :type t :identity t)
     (let ((id (when (slot-boundp buildlog 'id) (build-log-id build-log))))
       (with-slots (extension animal result when) build-log

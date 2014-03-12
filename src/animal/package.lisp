@@ -12,6 +12,7 @@
         #:iolib.pathnames)
   (:import-from #:iolib.base
                 #:read-file-into-string)
-  (:export #:register-animal
-           #:add-pg-config
-           #:list-pg-configs))
+  (:export #:register-animal-on-server
+           #:get-extension-to-build
+           #:upload-archive
+           #:build-extension-for-server))
