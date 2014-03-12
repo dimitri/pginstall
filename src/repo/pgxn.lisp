@@ -15,13 +15,30 @@
 (defvar *pgxn-mirror* "http://api.pgxn.org")
 (defvar *pgxn-index* (format nil "~a/~a" *pgxn-mirror* "index.json"))
 
-(defvar *pgxn-api*
-  (yason:parse
-   (babel:octets-to-string
-    (drakma:http-request *pgxn-index*) :encoding :utf-8)))
+(defvar *pgxn-api* nil)
 
-(defvar *dists* (get-all-dist-info)
+(defvar *dists* nil
   "The whole list of PGXN available extensions.")
+
+(defun get-all-dist-info ()
+  "Get details about all the extensions known at PGXN."
+  (get-pgxn-api)
+  (setf *dists*
+        (loop :for username :in (get-user-list)
+           :append (mapcar #'get-dist-info (get-user-release-list username)))))
+
+
+;;;
+;;; Integration of the PGXN API
+;;;
+(defun get-pgxn-api ()
+  "The whole PGXN API is based around publishing the meta-api information in
+   its index.json file, so that we can pretend to auto-discover the
+   features."
+  (setf *pgxn-api*
+        (yason:parse
+         (babel:octets-to-string
+          (drakma:http-request *pgxn-index*) :encoding :utf-8))))
 
 (defun fill-uri-template (tmpl-name &rest keyword-pairs &key &allow-other-keys)
   "Return a string to use an a PGXN API URI, given a TEMPLATE containing
@@ -62,6 +79,15 @@
                  :reason reason
                  :body body)))))
 
+
+;;;
+;;; Use the API to grab extension related information: we have to fetch all
+;;; usernames and we have them organized by first letter, then for each user
+;;; we may fetch a list of "releases", and each release is also a "dist"
+;;; object offering the information we need for a pginstall extension:
+;;;
+;;;   Extension Name, Repository URL and description.
+;;;
 (defun get-user-list (&optional (letters "abcdefghijklmnopqrstuvwxyz"))
   "Get the whole user list of PGXN."
   (loop :for letter :across letters
@@ -79,7 +105,6 @@
          (alexandria:hash-table-keys
           (gethash "releases" (query-pgxn "user" :user username)))))
     (if sorted (sort extensions #'string<) extensions)))
-
 
 (defun get-dist-info (dist-name)
   "Get details about given DIST-NAME."
@@ -101,7 +126,4 @@
                    :uri uri
                    :desc description)))
 
-(defun get-all-dist-info ()
-  "Get details about all the extensions known at PGXN."
-  (loop :for username :in (get-user-list)
-     :append (mapcar #'get-dist-info (get-user-release-list username))))
+
