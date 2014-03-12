@@ -82,11 +82,27 @@
                            (integer (parse-integer arg)))))
        ,@body)))
 
+;;;
+;;; Who doesn't like the advanced and detailed error reporting offered by
+;;; PostgreSQL? Let's have a try at it ourselves.
+;;;
+(define-condition cli-error ()
+  ((mesg   :initarg :mesg   :reader cli-error-message)
+   (detail :initarg :detail :reader cli-error-detail)
+   (hint   :initarg :hint   :reader cli-error-hint)))
+
 (defun main (argv)
   "The main entry point for the command-line interface."
   (destructuring-bind (fun &rest args)
       (find-command-function argv)
-    (apply fun args)))
+    (handler-case
+        (apply fun args)
+      (cli-error (e)
+        (format t
+                "ERROR: ~a~%~@[DETAIL: ~a~%~]~@[HINT: ~a~%~]"
+                (cli-error-message e)
+                (cli-error-detail e)
+                (cli-error-hint e))))))
 
 
 ;;;
@@ -112,6 +128,12 @@
 ;;;
 ;;; The buildfarm animal CLI
 ;;;
-;; (defun animal-register (command &rest args)
-;;   (with-arguments ((name :type string)) args
-;;     name))
+(defun animal-register (command &rest args)
+  (declare (ignore command args))
+  (read-config)                         ; that sets *animal-name*
+  (if *animal-name*
+      (register-animal-on-server)
+      (error 'cli-error
+             :mesg "no animal name"
+             :detail "To register this animal, you need to name it."
+             :hint "use the command: pginstall set name <name>")))

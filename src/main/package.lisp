@@ -3,6 +3,7 @@
 ;;;
 (defpackage #:pginstall
   (:use #:cl
+        #:pginstall.animal
         #:pginstall.common
         #:pginstall.config
         #:pginstall.repo))
