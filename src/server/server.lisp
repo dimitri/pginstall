@@ -16,25 +16,36 @@
        ;; User website
        (:GET  "/" 'home)
 
+       ;; Server remote control
+       (:GET  "/api/config" 'api-server-config)
+       (:GET  "/api/status" 'api-server-status)
+       (:GET  "/api/reload" 'api-server-reload)
+
        ;; Extension API
-       (:GET  "/api/list/extension"                    'api-list-extension)
-       (:GET  "/api/list/extension/:os/:version/:arch" 'api-list-available-extensions)
-       (:GET  "/api/fetch/:extension/:pgversion/:os/:version/:arch" 'api-fetch-archive)
+       (:GET  "/api/list/extension" 'api-list-extension)
+       (:GET  "/api/list/extension/:os/:version/:arch"
+              'api-list-available-extensions)
+
+       (:GET  "/api/fetch/:extension/:pgversion/:os/:version/:arch"
+              'api-fetch-archive)
+
+       (:POST "/api/add/extension" 'api-add-extension)
 
        ;; Buildfarm animal API
-       (:GET  "/api/list/plafform"   'api-list-platform)
-       (:GET  "/api/list/animal"     'api-list-animal)
-       (:GET  "/api/list/pgconfig"   'api-list-pgconfig)
+       (:GET  "/api/list/plafform"         'api-list-platform)
+       (:GET  "/api/list/animal"           'api-list-animal)
 
-       (:GET  "/api/get/pgconfig/:animal" 'api-get-pgconfig)
-       (:GET  "/api/add/pgconfig/:animal" 'api-add-pgconfig)
+       (:GET  "/api/list/pgconfig/:animal" 'api-list-pgconfig)
+       (:POST "/api/add/pgconfig/:animal"  'api-add-pgconfig)
 
        (:GET  "/api/get/work/for/:animal" 'api-get-work)
        (:POST "/api/upload/archive"       'api-upload-archive)
 
        ;; Repository server API
-       (:GET  "/api/register/animal/:name/:os/:version/:arch" 'api-register-animal)
-       (:GET  "/api/build/:extension" 'api-queue-extension-build)
+       (:GET  "/api/register/animal/:name/:os/:version/:arch"
+              'api-register-animal)
+       (:GET  "/api/build/:extension"
+              'api-queue-extension-build)
        ))
 
 (defvar *acceptor* nil "The Web Server")
@@ -64,6 +75,22 @@
   (stop-server)
   (start-server))
 
+(defun api-server-status ()
+  "Return OK when the server is OK."
+  (setf (hunchentoot:content-type*) "text/plain")
+  "OK")
+
+(defun api-server-config ()
+  "Return current server's configuration, in INI format."
+  (setf (hunchentoot:content-type*) "text/plain")
+  (with-output-to-string (s)
+    (write-current-config s)))
+
+(defun api-server-reload ()
+  "Reload the configuration from disk, then return it."
+  (read-config)
+  (api-server-config))
+
 
 ;;;
 ;;; Main entry points for the web server.
@@ -74,6 +101,20 @@
 ;;;
 ;;; elisp: (put 'with-prefixed-accessors 'lisp-indent-function 'defun)
 ;;;
+(defmacro with-condition-handling ((&key json content-type) &body body)
+  "Handle any condition signaled by BODY properly for a web server."
+  (let ((result (gensym)))
+   `(handler-case
+        (let* ((,result ,@body)
+               (,result (if ,json (yason:encode ,result) ,result)))
+          (when ,content-type
+            (setf (hunchentoot:content-type*) ,content-type))
+          ,result)
+      (condition (c)
+        (setf (hunchentoot:return-code*)
+              hunchentoot:+http-internal-server-error+)
+        (format t "~a" c)))))
+
 (defmacro define-api-function (fun args &body body)
   "Define the function FUN to return the result of BODY as a json encoded
    data in text-plain"
@@ -82,14 +123,8 @@
      (let ,(loop :for arg :in args
               :collect (list arg `(hunchentoot:url-decode ,arg)))
        (with-output-to-string (*standard-output*)
-         (handler-case
-             (let ((result (yason:encode ,@body)))
-               (setf (hunchentoot:content-type*) "text/plain")
-               result)
-           (condition (c)
-             (setf (hunchentoot:return-code*)
-                   hunchentoot:+http-internal-server-error+)
-             (format t "~a" c)))))))
+         (with-condition-handling (:json t :content-type "text/plain")
+           ,@body)))))
 
 (defmacro define-api-list (class-name)
   "Define a function that outputs a listing of instances of CLASS-NAME."
@@ -109,16 +144,53 @@
 
 
 ;;;
+;;; API for extensions
+;;;
+(defun api-add-extension ()
+  "Handle a :POST query with pg-config object's parameters."
+  (setf (hunchentoot:content-type*) "text/plain")
+  (let* ((full-name    (hunchentoot:post-parameter "fullname"))
+         (uri          (hunchentoot:post-parameter "uri"))
+         (description  (hunchentoot:post-parameter "description")))
+    (with-output-to-string (*standard-output*)
+      (with-condition-handling (:json t :content-type "text/plain")
+        (with-pgsql-connection (*dburi*)
+          (make-dao 'extension
+                    :full-name full-name
+                    :uri       uri
+                    :desc      description))))))
+
+
+;;;
 ;;; API entries for Build Animals
 ;;;
-(define-api-function api-get-pgconfig (animal-name)
-  (list-pg-configs :animal-name animal-name))
-
 (define-api-function api-register-animal (name os version arch)
   (register-animal name os version arch))
 
 (define-api-function api-get-work (animal)
   (queue-get-work animal))
+
+(define-api-function api-list-pgconfig (animal)
+  (list-pg-configs :animal-name animal))
+
+(defun api-add-pgconfig (animal-name)
+  "Handle a :POST query with pg-config object's parameters."
+  (setf (hunchentoot:content-type*) "text/plain")
+  (let* ((pg-config    (hunchentoot:post-parameter "pg-config"))
+         (version      (hunchentoot:post-parameter "version"))
+         (configure    (hunchentoot:post-parameter "configure"))
+         (cc           (hunchentoot:post-parameter "cc"))
+         (cflags       (hunchentoot:post-parameter "cflags")))
+    (with-output-to-string (*standard-output*)
+      (with-condition-handling (:json t :content-type "text/plain")
+        (with-pgsql-connection (*dburi*)
+          (make-dao 'pgconfig
+                    :animal-name animal-name
+                    :pg-config   pg-config
+                    :version     version
+                    :configure   configure
+                    :cc          cc
+                    :cflags      cflags))))))
 
 ;;;
 ;;; Repository server API

@@ -25,5 +25,6 @@
 
            #:read-config
            #:save-config
+           #:write-current-config
            #:set-option-by-name))
 

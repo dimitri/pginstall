@@ -20,6 +20,7 @@
      ("start"   . server-start)
      ("stop"    . server-stop)
      ("status"  . server-status)
+     ("reload"  . server-config)
      ("reload"  . server-reload)
      ("restart" . server-restart))
 
@@ -28,7 +29,7 @@
      ("register"   . animal-register)
      (("pg" "ls")  . animal-list-pgconfigs)
      (("pg" "add") . animal-add-pgconfig)
-     (("pg" "rm")  . animal-remove-pgconfig)
+     ;; (("pg" "rm")  . animal-remove-pgconfig)
      ("register"   . animal-register)
      ("build"      . animal-build)
      ("upload"     . animal-upload))
@@ -36,7 +37,7 @@
     ("extension"
      ("ls"              . extension-list)
      ("add"             . extension-add)
-     ("rm"              . extension-remove)
+     ;; ("rm"              . extension-remove)
      (("queue" "build") . extension-queue-build))))
 
 (defun ensure-list (l)
@@ -102,7 +103,15 @@
                 "ERROR: ~a~%~@[DETAIL: ~a~%~]~@[HINT: ~a~%~]"
                 (cli-error-message e)
                 (cli-error-detail e)
-                (cli-error-hint e))))))
+                (cli-error-hint e)))
+
+      (server-error (e)
+        (format t
+                "ERROR ~d ON ~a~%~@[REASON: ~a~%~]~@[BODY: ~a~%~]"
+                (server-error-status-code e)
+                (server-error-uri e)
+                (server-error-reason e)
+                (server-error-body e))))))
 
 
 ;;;
@@ -122,13 +131,24 @@
 (defun server-start ())
 (defun server-stop ())
 
-(defun server-status ())
+(defun server-status ()
+  "Query the server over HTTP on the /api/status URL, expecting \"OK\" back."
+  (query-repo-server 'status))
+
+(defun server-reload ()
+  "Have the server reload its configuration and return it to us."
+  (query-repo-server 'reload))
+
+(defun server-config ()
+  "Display current server's configuration."
+  (query-repo-server 'config))
 
 
 ;;;
 ;;; The buildfarm animal CLI
 ;;;
 (defun animal-register (command &rest args)
+  "Register the current *ANIMAL-NAME* against the server."
   (declare (ignore command args))
   (read-config)                         ; that sets *animal-name*
   (if *animal-name*
@@ -137,3 +157,30 @@
              :mesg "no animal name"
              :detail "To register this animal, you need to name it."
              :hint "use the command: pginstall set name <name>")))
+
+(defun animal-list-pgconfigs (command &rest args)
+  "List the known pgconfigs for current *ANIMAL-NAME*."
+  (declare (ignore command args))
+  (list-pgconfigs-on-server))
+
+(defun animal-add-pgconfig (pg add path &rest args)
+  "Add the details about a pgconfig PATH entry on the server."
+  (declare (ignore pg add args))
+  (add-pgconfig-on-server path))
+
+
+;;;
+;;; The extension CLI
+;;;
+(defun extension-list (command &rest args)
+  "List all known extensions on the server."
+  (declare (ignore command args))
+  (query-repo-server 'list 'extension))
+
+(defun extension-add (add fullname uri description)
+  "Add an extension on the server."
+  (declare (ignore add))
+  (post-repo-server 'add 'extension
+                    :fullname fullname
+                    :uri uri
+                    :description description))
