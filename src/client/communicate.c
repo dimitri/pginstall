@@ -173,7 +173,7 @@ download(const char *filename, const char *baseurl, int nbargs, ...)
 
     va_start (arg_list, nbargs);
 
-    for(i=0; i<nbargs; i++)
+    for (i=0; i<nbargs; i++)
     {
         str = va_arg (arg_list, char *);
 
@@ -200,7 +200,7 @@ download(const char *filename, const char *baseurl, int nbargs, ...)
     curl_easy_setopt(curl, CURLOPT_FILE, file);
     status = curl_easy_perform(curl);
 
-    if(status != 0)
+    if (status != 0)
     {
         curl_easy_cleanup(curl);
         curl_global_cleanup();
@@ -212,7 +212,7 @@ download(const char *filename, const char *baseurl, int nbargs, ...)
     }
 
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
-    if(code != 200 && code != 404)
+    if (code != 200 && code != 404)
     {
         curl_easy_cleanup(curl);
         curl_global_cleanup();
@@ -226,6 +226,12 @@ download(const char *filename, const char *baseurl, int nbargs, ...)
     fclose(file);
     curl_easy_cleanup(curl);
     curl_global_cleanup();
+
+    if (code != 200)
+    {
+        /* The server's error message is to be found in the file... */
+        unlink(filename);
+    }
 
     /* We just return "false" when we get a 404. */
     return code == 200;
