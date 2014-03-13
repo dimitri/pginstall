@@ -102,39 +102,6 @@
                       (server-error-body e)))))
         (usage argv))))
 
-(defvar *old-commands*
-  '(("set"
-     ("dburi"        . set-config-variable)
-     ("listen-port"  . set-config-variable)
-     ("archive-path" . set-config-variable)
-     ("name"         . set-config-variable)
-     ("build-root"   . set-config-variable)
-     ("gmake"        . set-config-variable)
-     ("git"          . set-config-variable)
-     ("server"       . set-config-variable))
-
-    ("server"
-     ("start"   . server-start)
-     ("stop"    . server-stop)
-     ("status"  . server-status)
-     ("config"  . server-config)
-     ("reload"  . server-reload)
-     ("restart" . server-restart))
-
-    ("animal"
-     ("name"       . animal-name)
-     ("register"   . animal-register)
-     (("pg" "ls")  . animal-list-pgconfigs)
-     (("pg" "add") . animal-add-pgconfig)
-     ;; (("pg" "rm")  . animal-remove-pgconfig)
-     ("build"      . animal-build))
-
-    ("extension"
-     ("ls"              . extension-list)
-     ("add"             . extension-add)
-     ;; ("rm"              . extension-remove)
-     (("queue" "build") . extension-queue-build))))
-
 
 ;;;
 ;;; And now the commands, starting with the setup
