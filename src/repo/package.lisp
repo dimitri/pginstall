@@ -75,6 +75,7 @@
            #:select-star
 
            ;; the Animal API
+           #:pick-animal-name
            #:register-animal
            #:add-pg-config
            #:list-pg-configs

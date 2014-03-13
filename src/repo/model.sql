@@ -23,6 +23,11 @@ create table platform (
   unique(os_name, os_version, arch)
 );
 
+create table registry (
+    name     text primary key,
+    pict     text
+);
+
 create table animal (
   id       serial primary key,
   name     text unique,

@@ -25,12 +25,11 @@
      ("restart" . server-restart))
 
     ("animal"
-     ("name"       . set-config-variable)
+     ("name"       . animal-name)
      ("register"   . animal-register)
      (("pg" "ls")  . animal-list-pgconfigs)
      (("pg" "add") . animal-add-pgconfig)
      ;; (("pg" "rm")  . animal-remove-pgconfig)
-     ("register"   . animal-register)
      ("build"      . animal-build))
 
     ("extension"
@@ -148,6 +147,14 @@
 ;;;
 ;;; The buildfarm animal CLI
 ;;;
+(defun animal-name (command &rest args)
+  "Automatically pick a free animal name in our list."
+  (declare (ignore command args))
+  (let ((name (yason:parse (query-repo-server 'pick 'my 'name))))
+    (format t "Welcome aboard ~a!~%" name)
+    (format t "See yourself at ~a/animal/pict/~a~%" *repo-server* name)
+    name))
+
 (defun animal-register (command &rest args)
   "Register the current *ANIMAL-NAME* against the server."
   (declare (ignore command args))

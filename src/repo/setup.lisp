@@ -50,8 +50,11 @@
 
   (with-pgsql-connection (*dburi*)
     (with-transaction ()
-     (loop for extension in *default-extension-list*
-        do (apply #'make-dao 'extension extension))
+     (loop for extension :in *default-extension-list*
+        :do (apply #'make-dao 'extension extension))
+
+     (loop :for (name . pict) :in *animal-name-registry*
+        :do (query "insert into registry(name, pict) values($1, $2)" name pict))
 
      (let* ((animal (make-dao 'animal :name *animal-name*)))
        (loop :for pgconfig :in (list-pg-config-in-path)

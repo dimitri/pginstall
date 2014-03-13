@@ -51,7 +51,10 @@
                          (:file "api-extension"   :depends-on ("package" "dao"))
                          (:file "api-animal"      :depends-on ("package" "dao"))
                          (:file "pgxn"  :depends-on ("package" "dao"))
-			 (:file "setup" :depends-on ("package" "dao"))))
+			 (:file "setup" :depends-on ("package"
+                                                     "dao"
+                                                     "api-animal"
+                                                     "pgxn"))))
                (:module animal
                         :depends-on ("common" "repo")
                         :components
