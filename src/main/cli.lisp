@@ -4,11 +4,108 @@
 
 (in-package #:pginstall)
 
-(defvar *commands*
+;;;
+;;; First, our very own command line facility.
+;;;
+(defstruct command verbs bindings help lambda)
+
+(defvar *commands* (make-array 0
+                               :element-type 'command
+                               :adjustable t
+                               :fill-pointer t)
+  "Host commands defined with the DEFINE-COMMAND macro.")
+
+(defmethod same-command ((a command) (b command))
+  "Return non-nil when a and b are commands with the same verbs"
+  (equal (command-verbs a) (command-verbs b)))
+
+(defmethod command-matches ((command command) args)
+  "When the given COMMAND matches given command line ARGS, then return it
+   and the argument to apply to it."
+  (declare (type list args))
+  (when (<= (length (command-verbs command)) (length args))
+    (let ((matches-p (loop :for verb :in (command-verbs command)
+                        :for arg in args
+                        :for matches-p := (string-equal verb arg)
+                        :while matches-p
+                        :finally (return matches-p))))
+      (when matches-p
+        (let ((fun-args (nthcdr (length (command-verbs command)) args)))
+          (when (= (length (command-bindings command)) (length fun-args))
+            (list (command-lambda command) fun-args)))))))
+
+(defmacro define-command ((verbs bindings) help-string &body body)
+  "Define a command that is to be fired when VERBS are found at the
+   beginning of the command, assigning remaining arguments to given
+   bindings.
+
+   The help-string is used when displaying the program usage."
+  (let ((fun      (gensym))
+        (command  (gensym))
+        (position (gensym)))
+   `(eval-when (:load-toplevel :compile-toplevel :execute)
+      (let* ((,fun      (lambda ,bindings ,@body))
+             (,command  (make-command :verbs ',verbs
+                                      :bindings ',bindings
+                                      :help ,help-string
+                                      :lambda (compile nil ,fun)))
+             (,position (position-if (lambda (c) (same-command c ,command))
+                                     *commands*)))
+        (if ,position
+            (setf (aref *commands* ,position) ,command)
+            (vector-push-extend ,command *commands*))))))
+
+(defun find-command-function (argv)
+  "Loop through *COMMANDS* to find the code to execute given ARGV."
+  (let ((args (rest argv)))
+    (loop :for command :across *commands*
+       :for match := (command-matches command args)
+       :until match
+       :finally (return match))))
+
+(defun usage (args)
+  "Loop over all the commands and output the usage of the main program"
+  (format t "~a: command line parse error.~%" (first args) )
+  (format t "~@[Error parsing args: ~{~s~^ ~}~%~]~%" (rest args))
+  (loop :for command :across *commands*
+     :do (with-slots (verbs bindings help) command
+           (format t "~{~a~^ ~} ~{~a~^ ~}~28T~a~%" verbs bindings help))))
+
+;;;
+;;; Who doesn't like the advanced and detailed error reporting offered by
+;;; PostgreSQL? Let's have a try at it ourselves.
+;;;
+(define-condition cli-error ()
+  ((mesg   :initarg :mesg   :reader cli-error-message)
+   (detail :initarg :detail :reader cli-error-detail)
+   (hint   :initarg :hint   :reader cli-error-hint)))
+
+(defun main (argv)
+  "The main entry point for the command-line interface."
+  (let ((match (find-command-function argv)))
+    (if match
+        (destructuring-bind (fun args) match
+          (handler-case
+              (apply fun args)
+            (cli-error (e)
+              (format t
+                      "ERROR: ~a~%~@[DETAIL: ~a~%~]~@[HINT: ~a~%~]"
+                      (cli-error-message e)
+                      (cli-error-detail e)
+                      (cli-error-hint e)))
+            (server-error (e)
+              (format t
+                      "ERROR ~d ON ~a~%~@[REASON: ~a~%~]~@[BODY: ~a~%~]"
+                      (server-error-status-code e)
+                      (server-error-uri e)
+                      (server-error-reason e)
+                      (server-error-body e)))))
+        (usage argv))))
+
+(defvar *old-commands*
   '(("set"
      ("dburi"        . set-config-variable)
      ("listen-port"  . set-config-variable)
-     ("uri"          . set-config-variable)
      ("archive-path" . set-config-variable)
      ("name"         . set-config-variable)
      ("build-root"   . set-config-variable)
@@ -38,126 +135,48 @@
      ;; ("rm"              . extension-remove)
      (("queue" "build") . extension-queue-build))))
 
-(defun ensure-list (l)
-  (typecase l
-    (list l)
-    (t    (list l))))
-
-(defun find-command-function (argv)
-  "Return the function to run for given command, and its arguments"
-  (destructuring-bind (program command &rest args) argv
-    (declare (ignore program))
-    (loop :for (section . funs ) :in *commands*
-       :when (string-equal section command)
-       :return (loop :for (cmd . fun) :in funs
-                  :when (notany #'null (mapcar #'string-equal (ensure-list cmd) args))
-                  :return `(,fun ,@args)))))
-
-(defmacro with-arguments (specs args &body body)
-  "Destructure argument list ARGS against SPECS and run BODY within a
-   lexical context that defines each SPECS entry as a binding to the
-   matching ARGS value.
-
-   SPECS is a list of:
-
-     - either a symbol name, which is the name of the binding
-     - a list of a symbol name followed by a type specification.
-
-   A type specification allows checking that the argument is of the proper
-   type and converts the string form of the argument to its proper
-   type unless a string is wanted (it's then a no-op).
-
-     - :type string
-     - :type integer"
-  (let ((bindings (mapcar #'car (mapcar #'ensure-list specs))))
-    `(destructuring-bind ,bindings
-         ',(loop :for spec :in specs
-              :for arg in args
-              :collect (destructuring-bind (symbol &key (type 'string))
-                           (ensure-list spec)
-                         (declare (ignore symbol))
-                         (case type
-                           (string  arg)
-                           (integer (parse-integer arg)))))
-       ,@body)))
-
-;;;
-;;; Who doesn't like the advanced and detailed error reporting offered by
-;;; PostgreSQL? Let's have a try at it ourselves.
-;;;
-(define-condition cli-error ()
-  ((mesg   :initarg :mesg   :reader cli-error-message)
-   (detail :initarg :detail :reader cli-error-detail)
-   (hint   :initarg :hint   :reader cli-error-hint)))
-
-(defun main (argv)
-  "The main entry point for the command-line interface."
-  (destructuring-bind (fun &rest args)
-      (find-command-function argv)
-    (handler-case
-        (apply fun args)
-      (cli-error (e)
-        (format t
-                "ERROR: ~a~%~@[DETAIL: ~a~%~]~@[HINT: ~a~%~]"
-                (cli-error-message e)
-                (cli-error-detail e)
-                (cli-error-hint e)))
-      (server-error (e)
-        (format t
-                "ERROR ~d ON ~a~%~@[REASON: ~a~%~]~@[BODY: ~a~%~]"
-                (server-error-status-code e)
-                (server-error-uri e)
-                (server-error-reason e)
-                (server-error-body e))))))
-
 
 ;;;
-;;; Now for implementing the functions.
+;;; And now the commands, starting with the setup
 ;;;
-(defun set-config-variable (name value)
-  "Set configuration variable by name NAME to given VALUE."
+(define-command (("config" "set") (name value))
+    "set config variable NAME to VALUE"
   (set-option-by-name name value))
 
+(define-command (("config" "get") (name))
+    "get config value for variable NAME"
+  (get-option-by-name name))
+
 
 ;;;
-;;; Controlling the repository server process.
+;;; Controlling the server
 ;;;
-(defun write-pidfile ())
-(defun read-pidfile ())
-
-(defun server-start ())
-(defun server-stop ())
-
-(defun server-status (command &rest args)
-  "Query the server over HTTP on the /api/status URL, expecting \"OK\" back."
-  (declare (ignore command args))
+(define-command (("server" "status") ())
+    "get the status of the currently running server"
   (query-repo-server 'status))
 
-(defun server-reload (command &rest args)
-  "Have the server reload its configuration and return it to us."
-  (declare (ignore command args))
+(define-command (("server" "reload") ())
+    "have the currently running server reload its config file"
   (query-repo-server 'reload))
 
-(defun server-config (command &rest args)
-  "Display current server's configuration."
-  (declare (ignore command args))
+(define-command (("server" "config") ())
+    "display the config currently in use in the running server"
   (query-repo-server 'config))
 
 
 ;;;
 ;;; The buildfarm animal CLI
 ;;;
-(defun animal-name (command &rest args)
-  "Automatically pick a free animal name in our list."
-  (declare (ignore command args))
-  (let ((name (yason:parse (query-repo-server 'pick 'my 'name))))
-    (format t "Welcome aboard ~a!~%" name)
-    (format t "See yourself at ~a/animal/pict/~a~%" *repo-server* name)
-    name))
+(define-command (("animal" "name") ())
+    "ask the server for a name for the current animal"
+  (let ((*animal-name* (yason:parse (query-repo-server 'pick 'my 'name))))
+    (save-config)
+    (format t "Welcome aboard ~a!~%" *animal-name*)
+    (format t "See yourself at ~a/animal/pict/~a~%" *repo-server* *animal-name*)
+    *animal-name*))
 
-(defun animal-register (command &rest args)
-  "Register the current *ANIMAL-NAME* against the server."
-  (declare (ignore command args))
+(define-command (("animal" "register") ())
+    "register the current animal name and pgconfigs on the server"
   (read-config)                         ; that sets *animal-name*
   (if *animal-name*
       (register-animal-on-server)
@@ -166,39 +185,31 @@
              :detail "To register this animal, you need to name it."
              :hint "use the command: pginstall set name <name>")))
 
-(defun animal-list-pgconfigs (command &rest args)
-  "List the known pgconfigs for current *ANIMAL-NAME*."
-  (declare (ignore command args))
+(define-command (("animal" "list" "pgconfig") ())
+    "list the pgconfig setups currently registered on the server"
   (list-pgconfigs-on-server))
 
-(defun animal-add-pgconfig (pg add path &rest args)
-  "Add the details about a pgconfig PATH entry on the server."
-  (declare (ignore pg add args))
+(define-command (("animal" "add" "pgconfig") (path))
+    "register a new pgconfig path on the server"
   (add-pgconfig-on-server path))
 
-(defun animal-build (command &rest args)
-  "Check the build queue to see if there's any work to do, and do it. Once."
-  (declare (ignore command args))
-  (build-extension-for-server))
+(define-command (("animal" "build") ())
+    "build all extension queued for our platform"
+  (loop :while (build-extension-for-server)))
 
 
 ;;;
 ;;; The extension CLI
 ;;;
-(defun extension-list (command &rest args)
-  "List all known extensions on the server."
-  (declare (ignore command args))
+(define-command (("extension" "list") ())
+    "list all known extensions on the server"
   (query-repo-server 'list 'extension))
 
-(defun extension-add (add fullname uri description)
-  "Add an extension on the server."
-  (declare (ignore add))
-  (post-repo-server 'add 'extension
-                    :fullname fullname
-                    :uri uri
-                    :description description))
+(define-command (("extension" "add") (name uri desc))
+    "list all known extensions on the server"
+  (post-repo-server 'add 'extension :fullname name :uri uri :description desc))
 
-(defun extension-queue-build (queue build extension-name)
-  "Ask the repository server to queue a build for given EXTENSION-NAME."
-  (declare (ignore queue build))
-  (query-repo-server 'build extension-name))
+(define-command (("extension" "queue" "build") (name))
+    "queue a build for extension NAME"
+  (query-repo-server 'build name))
+

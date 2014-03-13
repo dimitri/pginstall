@@ -14,7 +14,10 @@
                        *animal-name*
                        (os-name platform)
                        (os-version platform)
-                       (arch platform))))
+                       (arch platform))
+
+    ;; TODO: auto-discover pgconfig entries and add them in.
+    ))
 
 (defun list-pgconfigs-on-server ()
   "Query for known pgconfigs on the server."

@@ -7,6 +7,8 @@
 (defvar *config-filename* "~/.pginstall.ini"
   "Where to store pginstall configuration.")
 
+;;; TODO: review defaults
+
 (defparameter *dburi* "postgresql:///pginstall"
   "PostgreSQL database connection.")
 
@@ -40,7 +42,6 @@
      ("dburi"        *dburi*        validate-dburi)
      ("listen-port"  *listen-port*  parse-integer))
     ("repo"
-     ("uri"          *repo-server*  check-uri)
      ("archive-path" *archive-path* check-and-make-directory))
     ("animal"
      ("name"         *animal-name*  identity)
@@ -52,14 +53,15 @@
 
 (defun read-config (&optional (filename *config-filename*))
   "Read the FILENAME INI file and set the special variables accordingly."
-  (let* ((ini  (make-config))
-         (conf (read-files ini (list filename))))
-    (loop for (section . options) in *sections-variables*
-       do (loop for (option var check-fun) in options
-             do (let ((value (get-option conf section option)))
-                  (funcall check-fun value)
-                  (setf (symbol-value var) value))))
-    conf))
+  (when (probe-file filename)
+    (let* ((ini  (make-config))
+           (conf (read-files ini (list filename))))
+      (loop for (section . options) in *sections-variables*
+         do (loop for (option var check-fun) in options
+               do (let ((value (get-option conf section option)))
+                    (funcall check-fun value)
+                    (setf (symbol-value var) value))))
+      conf)))
 
 (defun write-current-config (stream)
   "Write the current configuration of pginstall in STREAM."
@@ -80,6 +82,15 @@
                      :if-does-not-exist :create
                      :external-format :utf8)
     (write-current-config s)))
+
+(defun get-option-by-name (option-name)
+  "Get the current value of the given OPTION-NAME."
+  (loop :for (section . options) :in *sections-variables*
+     :for value := (loop :for (option var check-fun) :in options
+                      :when (string-equal option-name option)
+                      :return (symbol-value var))
+     :when value
+     :return value))
 
 (defun set-option-by-name (option-name value &optional (save t))
   "Set the current special variable for OPTION-NAME to given value, and

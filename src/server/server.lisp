@@ -56,6 +56,9 @@
   (when *acceptor*
     (error "The web server is already running."))
 
+  ;; read the config file to know which port to listen on
+  (read-config)
+
   (setf *acceptor* (make-instance 'simpleroutes-acceptor
                                   :port *listen-port*
                                   :document-root *archive-path*
