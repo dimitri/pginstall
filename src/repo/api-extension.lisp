@@ -31,19 +31,23 @@
 (defun queue-get-work (animal-name)
   "Return an Extension object from the build queue"
   (with-pgsql-connection (*dburi*)
-    (query "with running as (
-             insert into running(queue, animal)
-                  select q.id, a.id
+    (query "with pending as (
+                  select distinct on(q.id, p.id) q.id as queue, p.id as platform
                     from queue q
                            CROSS JOIN
-                        (platform p join animal a on a.platform = p.id)
-                   where a.name = $1
+                        (platform p join animal a on a.name = $1
+                                                 and a.platform = p.id)
                   except
-                  select r.queue, a.id
+                  select distinct on(r.queue, p.id) r.queue, p.id as platform
                     from running r
                          join animal a on r.animal = a.id
-                   where a.name = $1
+                         join platform p on p.id = a.platform
                    limit 1
+            ),
+                 running as (
+             insert into running(queue, animal)
+                  select queue, (select id from animal where name = $1)
+                    from pending
                returning running.*
            )
            select e.*
