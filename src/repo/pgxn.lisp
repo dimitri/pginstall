@@ -15,17 +15,18 @@
 (defvar *pgxn-mirror* "http://api.pgxn.org")
 (defvar *pgxn-index* (format nil "~a/~a" *pgxn-mirror* "index.json"))
 
+(defvar *pgxn-stream* nil)
 (defvar *pgxn-api* nil)
-
 (defvar *dists* nil
   "The whole list of PGXN available extensions.")
 
 (defun get-all-dist-info ()
   "Get details about all the extensions known at PGXN."
-  (get-pgxn-api)
-  (setf *dists*
-        (loop :for username :in (get-user-list)
-           :append (mapcar #'get-dist-info (get-user-release-list username)))))
+  (let ((*pgxn-stream* (get-pgxn-api)))
+    (setf *dists*
+          (loop :for username :in (get-user-list)
+             :append (mapcar #'get-dist-info (get-user-release-list username))))
+    (close *pgxn-stream*)))
 
 
 ;;;
@@ -35,10 +36,14 @@
   "The whole PGXN API is based around publishing the meta-api information in
    its index.json file, so that we can pretend to auto-discover the
    features."
-  (setf *pgxn-api*
-        (yason:parse
-         (babel:octets-to-string
-          (drakma:http-request *pgxn-index*) :encoding :utf-8))))
+  (multiple-value-bind (body status-code headers uri stream must-close reason)
+      (drakma:http-request *pgxn-index* :close nil)
+    (declare (ignore status-code headers uri must-close reason))
+    (setf *pgxn-api*
+          (yason:parse
+           (babel:octets-to-string body :encoding :utf-8)))
+    ;; and return the stream
+    stream))
 
 (defun fill-uri-template (tmpl-name &rest keyword-pairs &key &allow-other-keys)
   "Return a string to use an a PGXN API URI, given a TEMPLATE containing
@@ -66,18 +71,25 @@
                          api
                          :allow-other-keys t
                          keyword-pairs)))
-    (format t "fetching: ~a~%" api-uri)
     (multiple-value-bind (body status-code headers uri stream must-close reason)
-        (drakma:http-request api-uri)
-      (declare (ignore headers stream must-close))
+        (handler-case
+            (drakma:http-request api-uri :stream *pgxn-stream* :close nil)
+          (stream-error (c)
+            (declare (ignore c))
+            (drakma:http-request api-uri :close nil)))
+      (declare (ignore headers must-close))
       (if (= status-code 200)
-          (yason:parse
-           (babel:octets-to-string body :encoding :utf-8))
-          (error 'pgxn-error
-                 :uri uri
-                 :status-code status-code
-                 :reason reason
-                 :body body)))))
+          (progn
+            (setf *pgxn-stream* stream) ; keep it
+            (yason:parse
+             (babel:octets-to-string body :encoding :utf-8)))
+          (progn
+            (setf *pgxn-stream* nil)    ; take a new one next time
+            (error 'pgxn-error
+                   :uri uri
+                   :status-code status-code
+                   :reason reason
+                   :body body))))))
 
 
 ;;;
