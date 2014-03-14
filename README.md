@@ -111,7 +111,7 @@ It's possible for the reposiroty server to also be a Build Farm Animal,
 which will then typically talk to the repository server at
 `http://localhost:8042/`.
 
-#### Setting up a Repository Server
+### Setting up a Repository Server
 
 The *repository server* needs a PostgreSQL database to register a list of
 extensions, platforms, animals and to manage the extension build queue.
@@ -135,7 +135,7 @@ following commands:
     pginstall config set listen-port 8042
     pginstall config set archive-path "/var/cache/pginstall"
 
-#### Setting up a Buildfarm Animal
+### Setting up a Buildfarm Animal
 
 A Build Farm Animal needs to be able to talk to the Repository Server in
 order to be fed with work to do, then to upload the archives it's been
@@ -168,7 +168,34 @@ build it, prepare an archive, and upload the archive. Then the animal will
 ask for the next extension to build again, and will only stops when the
 queue is empty for its platform.
 
-#### Setting up the installer in a PostgreSQL installation
+#### pgconfig automatic detection
+
+The command `pginstall animal register` will find the existing `pg_config`
+programs available on the current build machine. You can check that list
+with the following command:
+
+    pginstall animal list pgconfig
+
+To find the list of `pg_config` build environments to use, pginstall search
+in the following places:
+
+  - current `$PATH`
+  - debian style `/usr/lib/postgresql/X.Y/bin`
+  - centos style `/usr/pgsql-X.Y/bin`
+  
+Any path entry containing `X.Y` will be used as a pattern and the template
+is replaced in a loop with the value `8.4`, `9.0`, `9.1`, `9.2`, `9.3` and
+`9.4`.
+
+To add your own `pg_config` entries to the list of build environments used
+by pginstall, tweak the `PATH` under which you run the `pginstall animal
+build` command.
+
+You can register newly added environments with the command
+
+    pginstall animal add pgconfig /path/to/X.Y/bin/pg_config
+
+### Setting up the installer in a PostgreSQL installation
 
 The idea is that pginstall will divert the normal execution of the following
 PostgreSQL commands, by installing what PostgreSQL calls a *Process Utility
@@ -201,14 +228,31 @@ Here's how to use pginstall components.
 
 ### The reposistory server
 
+You need to start the repository server for the buildfarm and the clients to
+be able to talk to it.
+
+    pginstall server start
     pginstall server status
     pginstall server config
 
-    pginstall extension queue build prefix
+Then you can queue extension builds, that will get done as soon as some
+animal on the buildfarm wakes up and ask for some work to do.
+
+    pginstall extension queue prefix
 
 ### The buildfarm animals
 
-    pginstall 
+The main command you need to manage your buildfarm animal, once they are
+setup, is the following:
+
+    pginstall animal build
+    
+If you happen to add new PostgreSQL version support in an existing animal,
+it will be automatically picked up by the `build` command. You can register
+the new setup to the repository server to ease the management of the build
+farm animals with the following command:
+
+    pginstall animal add pgconfig /path/to/X.Y/bin/pgconfig
 
 ### The pginstall Extension
 

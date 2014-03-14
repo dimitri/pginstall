@@ -127,21 +127,20 @@
 
 (defun build-extension (extension-full-name extension-uri
                         &key
-                          (pgconfig-path-list (list-pg-config-in-path))
+                          (pgconfig-path-list (find-pgconfig-paths))
                           ((animal-name *animal-name*) *animal-name*))
   "Build extension EXTENSION-FULL-NAME, on the build animal."
   (let* ((extension      (make-instance 'extension
                                         :full-name extension-full-name
                                         :uri extension-uri))
          (root           (extension-build-root extension))
-         (pg-config-keys '(:CONFIGURE :CC :VERSION :CFLAGS
-                           :DOCDIR :PKGLIBDIR :SHAREDIR))
          (preamble
           (with-output-to-string (*standard-output*)
             ;; git clone the extension sources
             (format t "rm -rf ~a~%" root)
             (delete-files root :recursive t)
             (git-clone extension root))))
+    (declare (ignore preamble))
 
-    (loop for pgconfig-path in pgconfig-path-list
-       collect (build-extension-with-pgconfig extension root pgconfig-path))))
+    (loop :for pgconfig-path :in pgconfig-path-list
+       :collect (build-extension-with-pgconfig extension root pgconfig-path))))

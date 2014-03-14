@@ -171,7 +171,7 @@
     "list all known extensions on the server"
   (post-repo-server 'add 'extension :fullname name :uri uri :description desc))
 
-(define-command (("extension" "queue" "build") (name))
+(define-command (("extension" "queue") (name))
     "queue a build for extension NAME"
   (query-repo-server 'build name))
 
