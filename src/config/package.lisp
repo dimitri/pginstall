@@ -15,6 +15,8 @@
            ;; repository server
            #:*repo-server*
            #:*archive-path*
+           #:*repo-logfile*
+           #:*http-logfile*
 
            ;; build animal
            #:*animal-name*

@@ -17,9 +17,10 @@
        (:GET  "/" 'home)
 
        ;; Server remote control
-       (:GET  "/api/config" 'api-server-config)
-       (:GET  "/api/status" 'api-server-status)
-       (:GET  "/api/reload" 'api-server-reload)
+       (:GET  "/api/config"             'api-server-config)
+       (:GET  "/api/status"             'api-server-status)
+       (:GET  "/api/reload"             'api-server-reload)
+       (:GET  "/api/terminate/yourself" 'api-server-stop)
 
        ;; Extension API
        (:GET  "/api/list/extension" 'api-list-extension)
@@ -50,6 +51,7 @@
        ))
 
 (defvar *acceptor* nil "The Web Server")
+(defvar *server-is-running* nil)
 
 (defun start-server ()
   "Start the web server"
@@ -62,9 +64,10 @@
   (setf *acceptor* (make-instance 'simpleroutes-acceptor
                                   :port *listen-port*
                                   :document-root *archive-path*
-                                  :access-log-destination *terminal-io*
-                                  :message-log-destination *terminal-io*))
-  (hunchentoot:start *acceptor*))
+                                  :access-log-destination *http-logfile*
+                                  :message-log-destination *repo-logfile*))
+  (hunchentoot:start *acceptor*)
+  (setf *server-is-running* t))
 
 (defun stop-server ()
   "Stop the web server"
@@ -72,12 +75,18 @@
     (error "The web server isn't running."))
 
   (hunchentoot:stop *acceptor*)
-  (setf *acceptor* nil))
+  (setf *acceptor* nil *server-is-running* nil))
 
 (defun restart-server ()
   "Restart the web server."
   (stop-server)
   (start-server))
+
+(defun api-server-stop ()
+  "Stop the server, from remote, just set *server-is-running* to nil"
+  (setf *server-is-running* nil)
+  (setf (hunchentoot:content-type*) "text/plain")
+  "OK, I'm stopping now...")
 
 (defun api-server-status ()
   "Return OK when the server is OK."
@@ -143,8 +152,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (define-api-list extension)
   (define-api-list platform)
-  (define-api-list animal)
-  (define-api-list pgconfig))
+  (define-api-list animal))
 
 
 ;;;

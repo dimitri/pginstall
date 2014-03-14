@@ -16,5 +16,10 @@
         #:pginstall.repo
         #:pginstall.animal
         #:postmodern
-        #:simple-routes))
+        #:simple-routes)
+  (:export #:*acceptor*
+           #:*server-is-running*
+           #:start-server
+           #:stop-server
+           #:restart-server))
 

@@ -7,4 +7,5 @@
         #:pginstall.client
         #:pginstall.common
         #:pginstall.config
-        #:pginstall.repo))
+        #:pginstall.repo
+        #:pginstall.server))

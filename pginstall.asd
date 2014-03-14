@@ -11,6 +11,7 @@
 		 #:drakma		; http client, download archives
 		 #:local-time		; UDP date parsing
 		 #:py-configparser	; Read old-style INI config files
+                 #:split-sequence       ; split strings
                  #:iolib                ; I/O library
                  #:iolib.os             ; OS level interface, pathnames
                  #:puri                 ; URI validation and manipulation

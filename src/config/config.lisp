@@ -7,7 +7,8 @@
 (defvar *config-filename* "~/.pginstall.ini"
   "Where to store pginstall configuration.")
 
-;;; TODO: review defaults
+(defparameter *repo-logfile* "/tmp/pginstall-repo.log")
+(defparameter *http-logfile* "/tmp/pginstall-http.log")
 
 (defparameter *dburi* "postgresql:///pginstall"
   "PostgreSQL database connection.")
@@ -30,7 +31,7 @@
 (defparameter *repo-server* "http://localhost:8042/"
   "HTTP URI of the repository server this animal should register against.")
 
-(defparameter *animal-name* "bat"
+(defparameter *animal-name* nil
   "Name of the animal that runs on this local instance.")
 
 
@@ -40,7 +41,9 @@
 (defvar *sections-variables*
   '(("common"
      ("dburi"        *dburi*        validate-dburi)
-     ("listen-port"  *listen-port*  parse-integer))
+     ("listen-port"  *listen-port*  parse-integer)
+     ("repo-logfile" *repo-logfile* check-file-path)
+     ("http-logfile" *http-logfile* check-file-path))
     ("repo"
      ("archive-path" *archive-path* check-and-make-directory))
     ("animal"
@@ -56,11 +59,11 @@
   (when (probe-file filename)
     (let* ((ini  (make-config))
            (conf (read-files ini (list filename))))
-      (loop for (section . options) in *sections-variables*
-         do (loop for (option var check-fun) in options
-               do (let ((value (get-option conf section option)))
-                    (funcall check-fun value)
-                    (setf (symbol-value var) value))))
+      (loop :for (section . options) :in *sections-variables*
+         :do (loop :for (option var check-fun) :in options
+                :do (let ((value (get-option conf section option)))
+                      (funcall check-fun value)
+                      (setf (symbol-value var) value))))
       conf)))
 
 (defun write-current-config (stream)
@@ -95,13 +98,13 @@
 (defun set-option-by-name (option-name value &optional (save t))
   "Set the current special variable for OPTION-NAME to given value, and
    optionally save the new setup to *config-filename*."
-  (loop for (section . options) in *sections-variables*
-     do (loop for (option var check-fun) in options
-           when (string-equal option-name option)
-           do (progn
-                (funcall check-fun value)
-                (setf (symbol-value var) value)
-                (when save (save-config)))))
+  (loop :for (section . options) :in *sections-variables*
+     :do (loop for (option var check-fun) :in options
+            :when (string-equal option-name option)
+            :do (progn
+                  (funcall check-fun value)
+                  (setf (symbol-value var) value)
+                  (when save (save-config)))))
   ;; return the new value
   value)
 
@@ -136,3 +139,8 @@
                  (uri-host uri))
       (error "Could not parse the URI: ~s" value))
     value))
+
+(defun check-file-path (path)
+  "Check that we can open a file at given PATH."
+  (ensure-directories-exist
+   (directory-namestring (file-path-namestring (parse-file-path path)))))

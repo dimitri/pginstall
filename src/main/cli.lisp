@@ -7,17 +7,18 @@
 ;;;
 ;;; First, our very own command line facility.
 ;;;
-(defstruct command verbs bindings help lambda)
+(eval-when (:load-toplevel :compile-toplevel :execute)
+  (defstruct command verbs bindings help lambda)
 
-(defvar *commands* (make-array 0
-                               :element-type 'command
-                               :adjustable t
-                               :fill-pointer t)
-  "Host commands defined with the DEFINE-COMMAND macro.")
+  (defvar *commands* (make-array 0
+                                 :element-type 'command
+                                 :adjustable t
+                                 :fill-pointer t)
+    "Host commands defined with the DEFINE-COMMAND macro.")
 
-(defmethod same-command ((a command) (b command))
-  "Return non-nil when a and b are commands with the same verbs"
-  (equal (command-verbs a) (command-verbs b)))
+  (defmethod same-command ((a command) (b command))
+    "Return non-nil when a and b are commands with the same verbs"
+    (equal (command-verbs a) (command-verbs b))))
 
 (defmethod command-matches ((command command) args)
   "When the given COMMAND matches given command line ARGS, then return it
@@ -42,9 +43,14 @@
    The help-string is used when displaying the program usage."
   (let ((fun      (gensym))
         (command  (gensym))
-        (position (gensym)))
+        (position (gensym))
+        (output   (gensym)))
    `(eval-when (:load-toplevel :compile-toplevel :execute)
-      (let* ((,fun      (lambda ,bindings ,@body))
+      (let* ((,fun      (lambda ,bindings
+                          (let ((,output (progn ,@body)))
+                            (typecase ,output
+                              (string (format t "~a~%" ,output))
+                              (t      nil)))))
              (,command  (make-command :verbs ',verbs
                                       :bindings ',bindings
                                       :help ,help-string
@@ -99,7 +105,9 @@
                       (server-error-status-code e)
                       (server-error-uri e)
                       (server-error-reason e)
-                      (server-error-body e)))))
+                      (server-error-body e)))
+            (condition (c)
+              (format t "ERROR: ~a~%" c))))
         (usage argv))))
 
 
@@ -118,6 +126,29 @@
 ;;;
 ;;; Controlling the server
 ;;;
+(define-command (("server" "start") ())
+    "start the repository server"
+  (let ((status (ignore-errors (query-repo-server 'status)))
+        (*repo-logfile* *terminal-io*))
+    (unless (and status (string= "OK" status))
+      (daemon:daemonize :output *repo-logfile*
+                        :error  *repo-logfile*
+                        :exit-parent t
+                        :sigterm (lambda (sig)
+                                   (declare (ignore sig))
+                                   (stop-server)))
+      (format t "PLOP~%")
+      (format *terminal-io* "PLIIP~%")
+      (format *repo-logfile* "AAAH~%")
+      (start-server)
+      (loop :while *server-is-running*
+         :do (format t "still wow!~%")
+         :do (sleep 1)))))
+
+(define-command (("server" "stop") ())
+    "stop the currently running server"
+  (query-repo-server 'terminate 'yourself))
+
 (define-command (("server" "status") ())
     "get the status of the currently running server"
   (query-repo-server 'status))
@@ -141,14 +172,14 @@
   (format t "See yourself at ~a/animal/pict/~a~%" *repo-server* *animal-name*))
 
 (define-command (("animal" "find" "pgconfig") ())
-    "list the pgconfig setups currently registered on the server"
+    "list the pgconfig setups  registered on the server"
   (loop :for pgconfig-path :in (find-pgconfig-paths)
      :for pgconfig := (make-instance 'pgconfig :pg-config pgconfig-path)
      :do (format t "Found ~s for ~a~%"
                  pgconfig-path (pg-version pgconfig))))
 
 (define-command (("animal" "list" "pgconfig") ())
-    "list the pgconfig setups currently registered on the server"
+    "list the pgconfig setups registered on the server"
   (list-pgconfigs-on-server))
 
 (define-command (("animal" "add" "pgconfig") (path))
@@ -168,7 +199,7 @@
   (query-repo-server 'list 'extension))
 
 (define-command (("extension" "add") (name uri desc))
-    "list all known extensions on the server"
+    "add a new extension on the repository server"
   (post-repo-server 'add 'extension :fullname name :uri uri :description desc))
 
 (define-command (("extension" "queue") (name))

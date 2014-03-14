@@ -3,7 +3,10 @@
 
 ((nil
   (sentence-end-double-space . t)
-  (require-final-newline . t)
+  (require-final-newline . t))
+ (lisp-mode
+  (indent-tabs-mode . nil))
+ (c-mode
   (indent-tabs-mode . nil))
  (emacs-lisp-mode
   (whitespace-style face trailing lines-tail)
