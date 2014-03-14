@@ -24,7 +24,8 @@
         #:iolib.pathnames)
   (:import-from #:iolib.base
                 #:read-file-into-string)
-  (:export #:register-animal-on-server
+  (:export #:discover-animal-setup-and-register-on-server
+           #:register-animal-on-server
            #:list-pgconfigs-on-server
            #:add-pgconfig-on-server
            #:get-extension-to-build

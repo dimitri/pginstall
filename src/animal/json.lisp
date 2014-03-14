@@ -4,6 +4,15 @@
 
 (in-package #:pginstall.animal)
 
+(defun parse-animal (json)
+  "Given a JSON string representing an archive DAO object, returns a proper
+   CLOS object."
+  (let* ((hash       (yason:parse json))
+         (id         (gethash "ID" hash))
+         (name       (gethash "NAME" hash))
+         (platform   (gethash "PLATFORM" hash)))
+    (make-instance 'animal :id id :name name :platform platform)))
+
 (defun parse-archive (json)
   "Given a JSON string representing an archive DAO object, returns a proper
    CLOS object."

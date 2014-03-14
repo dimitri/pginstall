@@ -7,6 +7,28 @@
 ;;;
 ;;; Client side implementation of the API.
 ;;;
+(defun discover-animal-setup-and-register-on-server ()
+  "Do the whole animal naming and registering dance with the Build Farm Server:
+
+     - Ask the server for a name,
+     - Find the pgconfigs path on this system,
+     - Register against the server with our name and pgconfigs,
+     - Save the local animal configuration file."
+  ;; first change the *animal-name* globally
+  (let* ((platform (make-instance 'platform))
+         (animal   (parse-animal
+                    (query-repo-server 'pick 'my 'name
+                                       (os-name platform)
+                                       (os-version platform)
+                                       (arch platform)))))
+    (setf *animal-name* (name animal))
+
+    (loop :for pgconfig-path :in (find-pgconfig-paths)
+       :do (add-pgconfig-on-server pgconfig-path))
+
+    ;; serialize current configuration to ini file.
+    (save-config)))
+
 (defun register-animal-on-server ()
   "Register *ANIMAL-NAME* on *REPO-SERVER* for current platform."
   (let ((platform (make-instance 'platform)))
@@ -14,10 +36,7 @@
                        *animal-name*
                        (os-name platform)
                        (os-version platform)
-                       (arch platform))
-
-    ;; TODO: auto-discover pgconfig entries and add them in.
-    ))
+                       (arch platform))))
 
 (defun list-pgconfigs-on-server ()
   "Query for known pgconfigs on the server."

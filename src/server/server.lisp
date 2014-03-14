@@ -42,7 +42,7 @@
        (:POST "/api/upload/archive"       'api-upload-archive)
 
        ;; Repository server API
-       (:GET  "/api/pick/my/name"  'api-pick-my-name)
+       (:GET  "/api/pick/my/name/:os/:version/:arch" 'api-pick-my-name)
        (:GET  "/api/register/animal/:name/:os/:version/:arch"
               'api-register-animal)
        (:GET  "/api/build/:extension"
@@ -168,8 +168,9 @@
 ;;;
 ;;; API entries for Build Animals
 ;;;
-(define-api-function api-pick-my-name ()
-  (pick-animal-name))
+(define-api-function api-pick-my-name (os version arch)
+  (let ((*animal-name* (pick-animal-name)))
+    (register-animal *animal-name* os version arch)))
 
 (define-api-function api-register-animal (name os version arch)
   (register-animal name os version arch))

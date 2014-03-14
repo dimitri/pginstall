@@ -134,23 +134,18 @@
 ;;;
 ;;; The buildfarm animal CLI
 ;;;
-(define-command (("animal" "name") ())
-    "ask the server for a name for the current animal"
-  (let ((*animal-name* (yason:parse (query-repo-server 'pick 'my 'name))))
-    (save-config)
-    (format t "Welcome aboard ~a!~%" *animal-name*)
-    (format t "See yourself at ~a/animal/pict/~a~%" *repo-server* *animal-name*)
-    *animal-name*))
-
 (define-command (("animal" "register") ())
-    "register the current animal name and pgconfigs on the server"
-  (read-config)                         ; that sets *animal-name*
-  (if *animal-name*
-      (register-animal-on-server)
-      (error 'cli-error
-             :mesg "no animal name"
-             :detail "To register this animal, you need to name it."
-             :hint "use the command: pginstall set name <name>")))
+    "ask the server for a name for the current animal"
+  (discover-animal-setup-and-register-on-server)
+  (format t "Welcome aboard ~a!~%" *animal-name*)
+  (format t "See yourself at ~a/animal/pict/~a~%" *repo-server* *animal-name*))
+
+(define-command (("animal" "find" "pgconfig") ())
+    "list the pgconfig setups currently registered on the server"
+  (loop :for pgconfig-path :in (find-pgconfig-paths)
+     :for pgconfig := (make-instance 'pgconfig :pg-config pgconfig-path)
+     :do (format t "Found ~s for ~a~%"
+                 pgconfig-path (pg-version pgconfig))))
 
 (define-command (("animal" "list" "pgconfig") ())
     "list the pgconfig setups currently registered on the server"

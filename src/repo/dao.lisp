@@ -73,9 +73,9 @@
 ;;; The animal
 ;;;
 (defclass animal ()
-    ((id       :col-type integer   :reader animal-id)
+    ((id       :col-type integer :reader animal-id  :initarg :id)
      (name     :col-type string  :accessor name     :initarg :name)
-     (platform :col-type integer :reader platform))
+     (platform :col-type integer :reader platform   :initarg :platform))
   (:documentation "a Build Animal, its job is to build extensions.")
   (:metaclass dao-class)
   (:keys id))

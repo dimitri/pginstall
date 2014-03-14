@@ -125,36 +125,48 @@ Then open your browser at `http://localhost:8042/`, maybe replacing
 up. By default the respository server listens on port `8042`, you can edit
 that setting before starting the server:
 
-    pginstall set listen-port 12345
+    pginstall config set listen-port 12345
 
 Once started time, the web interface of the repository server will guide you
 through some more setup that you need to consider, or you can use the
 following commands:
 
-    pginstall set dburi postgresql://user@host:5432/dbname
-    pginstall set listen-port 8042
-    pginstall set archive-path "/var/cache/pginstall"
+    pginstall config set dburi postgresql://user@host:5432/dbname
+    pginstall config set listen-port 8042
+    pginstall config set archive-path "/var/cache/pginstall"
 
 #### Setting up a Buildfarm Animal
 
 A Build Farm Animal needs to be able to talk to the Repository Server in
 order to be fed with work to do, then to upload the archives it's been
-building.
+building. Also, the animal needs a name and to register the `pgconfig` paths
+available to build extensions, to make it easier for us humans to track
+things:
 
-    pginstall set server http://pginstall.mycompany.com:8042/
-    pginstall set build-root /home/pginstall/build
-    pginstall animal name    
+    pginstall config set server http://pginstall.mycompany.com:8042/
     pginstall animal register
+
+The default setting for the server uri is `http://localhost:8042/` so that
+by default, your machine can both serve Extensions and Build them.
 
 If you have installed several version of the `make` and `git` tools and want
 to make sure that pginstall will pick the right one, you can use the
 following settings:
 
-    pginstall set gmake /usr/local/bin/gmake
-    pginstall set git /usr/local/bin/git
+    pginstall config set gmake /usr/local/bin/gmake
+    pginstall config set git /usr/local/bin/git
 
-The default setting for the server uri is `http://localhost:8042/` so that
-by default, your machine can both serve Extensions and Build them.
+The final step is to setup where to build the extensions, then you can tell
+the animal to have at the build queue:
+
+    pginstall config set build-root /home/pginstall/build
+    pginstall animal build
+
+The `pginstall animal build` command will have the animal take the next
+extension to build on the local platform from the repository build queue,
+build it, prepare an archive, and upload the archive. Then the animal will
+ask for the next extension to build again, and will only stops when the
+queue is empty for its platform.
 
 #### Setting up the installer in a PostgreSQL installation
 

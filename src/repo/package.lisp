@@ -37,7 +37,6 @@
            #:pg-configure
            #:pg-cc
            #:pg-cflags
-           #:list-pg-config-in-path
 
            #:queue                      ; the queue class
            #:queue-id
