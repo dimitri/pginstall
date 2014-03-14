@@ -23,6 +23,7 @@
                  #:yason                ; JSON routines
                  #:closer-mop           ; introspection
                  #:daemon               ; run the repo server in the background
+                 #:cl-who               ; HTML production from lisp code
 		 )
     :components
     ((:module "lib"
@@ -74,8 +75,11 @@
                         :depends-on ("common" "config" "repo" "animal")
 			:components
 			((:file "package")
-                         (:file "json" :depends-on ("package"))
-			 (:file "server" :depends-on ("package" "json"))))
+                         (:file "json"     :depends-on ("package"))
+                         (:file "frontend" :depends-on ("package"))
+			 (:file "server"   :depends-on ("package"
+                                                        "json"
+                                                        "frontend"))))
 
                (:module main
                         :depends-on ("common" "config" "repo" "animal" "server")

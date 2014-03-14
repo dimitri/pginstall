@@ -16,7 +16,10 @@
         #:pginstall.repo
         #:pginstall.animal
         #:postmodern
-        #:simple-routes)
+        #:simple-routes
+        #:cl-who)
+  (:import-from #:iolib.base
+                #:read-file-into-string)
   (:export #:*acceptor*
            #:*server-is-running*
            #:start-server

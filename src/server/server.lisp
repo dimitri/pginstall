@@ -15,6 +15,11 @@
       (compile-routes
        ;; User website
        (:GET  "/" 'home)
+       (:GET  "/dist/.*"   'serve-bootstrap-file)
+       (:GET  "/pict/.*"   'serve-pict-file)
+
+       (:GET  "/extension" 'front-list-extensions)
+       (:GET  "/animal"    'front-list-animals)
 
        ;; Server remote control
        (:GET  "/api/config"             'api-server-config)
@@ -108,12 +113,6 @@
   (api-server-config))
 
 
-;;;
-;;; Main entry points for the web server.
-;;;
-(defun home ()
-  "Hello, world?")
-
 ;;;
 ;;; elisp: (put 'with-prefixed-accessors 'lisp-indent-function 'defun)
 ;;;

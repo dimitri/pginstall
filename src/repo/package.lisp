@@ -78,6 +78,7 @@
            #:setup
 
            ;; the Animal API
+           #:*animal-name-registry*
            #:pick-animal-name
            #:register-animal
            #:add-pg-config
