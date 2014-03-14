@@ -10,6 +10,12 @@ echo "deb http://apt.postgresql.org/pub/repos/apt/ wheezy-pgdg main" | sudo tee 
 
 wget --quiet -O - ${pgdgkey} | sudo apt-key add -
 
+iolib=/etc/apt/sources.list.d/iolib.list
+iolibkey=http://download.opensuse.org/repositories/home:/sionescu/Debian_Wheezy/Release.key
+echo "deb http://download.opensuse.org/repositories/home:/sionescu/Debian_Wheezy/ ./" |sudo tee $iolib
+
+wget --quiet -O - ${iolibkey} | sudo apt-key add -
+
 sudo apt-get update
 sudo apt-get install -y postgresql-9.3 postgresql-contrib-9.3 \
                         postgresql-9.3-ip4r                   \

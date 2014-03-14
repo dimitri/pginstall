@@ -8,4 +8,20 @@
         #:pginstall.common
         #:pginstall.config
         #:pginstall.repo
-        #:pginstall.server))
+        #:pginstall.server)
+
+  (:export #:*listen-port*
+           #:*repo-logfile*
+           #:*http-logfile*
+           #:*dburi*
+           #:*archive-path*
+           #:read-config
+           #:save-config
+
+           ;; controlling the server
+           #:*acceptor*
+           #:start-server
+           #:stop-server
+           #:restart-server
+           #:query-repo-server
+           #:post-repo-server))

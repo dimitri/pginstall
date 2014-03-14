@@ -14,25 +14,26 @@
     (:full-name "github.com/markokr/plproxy"
      :uri       "https://github.com/markokr/plproxy-dev.git"
      :desc      "PL/Proxy"))
-  "A list of Extension. Each extension is a list of its full name, uri and
-   description.")
+  "A default list of Extension, to start with something.")
 
-(defun setup ()
+(defparameter *model*
+  (cl-ppcre:split
+   ";\\s*"
+   (iolib.base:read-file-into-string
+    (asdf:system-relative-pathname :pginstall "src/repo/model.sql")))
+  "List of SQL queries to run to prepare our data model.")
+
+(defun setup (&optional dburi)
   "Bootstrap an automated setup so that we can play with a repository server
    and a local animal."
-  (read-config)
+  (let ((*dburi* (or dburi *dburi*)))
+    (with-pgsql-connection (*dburi*)
+      (with-transaction ()
+        (loop :for sql :in *model* :do (query sql))
 
-  (with-pgsql-connection (*dburi*)
-    (with-transaction ()
-     (loop for extension :in *default-extension-list*
-        :do (apply #'make-dao 'extension extension))
+        (loop :for extension :in *default-extension-list*
+           :do (apply #'make-dao 'extension extension))
 
-     (loop :for (name . pict) :in *animal-name-registry*
-        :do (query "insert into registry(name, pict) values($1, $2)" name pict))
-
-     (let* ((animal (make-dao 'animal :name *animal-name*)))
-       (loop :for pgconfig :in (find-pgconfig-paths)
-          :collect (make-dao 'pgconfig
-                             :animal-name *animal-name*
-                             :animal-id   (animal-id animal)
-                             :pg-config   pgconfig))))))
+        (loop :for (name . pict) :in *animal-name-registry*
+           :do (query "insert into registry(name, pict) values($1, $2)"
+                      name pict))))))

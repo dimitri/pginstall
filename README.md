@@ -116,24 +116,26 @@ which will then typically talk to the repository server at
 The *repository server* needs a PostgreSQL database to register a list of
 extensions, platforms, animals and to manage the extension build queue.
 
-Setup the necessary bits:
+Setup the necessary bits and start the server:
 
+    pginstall server setup postgresql://user@host:5432/dbname
     pginstall server start
 
-Then open your browser at `http://localhost:8042/`, maybe replacing
-`localhost` with the hostname of the *repository server* you are setting
-up. By default the respository server listens on port `8042`, you can edit
-that setting before starting the server:
+Then check that it's running fine:
 
-    pginstall config set listen-port 12345
+    pginstall server status
+    pginstall server config
 
-Once started time, the web interface of the repository server will guide you
-through some more setup that you need to consider, or you can use the
-following commands:
+Note that the configuration active at this point is the default in-memory
+set of settings that allow you getting started. You might want to change
+several of the settings in place, using the following commands:
 
     pginstall config set dburi postgresql://user@host:5432/dbname
     pginstall config set listen-port 8042
     pginstall config set archive-path "/var/cache/pginstall"
+
+As soon as you use the `pginstall config set` command, a configuration file
+is created to save your preferences in `~/.pginstall.ini`.
 
 ### Setting up a Buildfarm Animal
 

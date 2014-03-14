@@ -161,6 +161,10 @@
     "display the config currently in use in the running server"
   (query-repo-server 'config))
 
+(define-command (("server" "setup") (dburi))
+    "prepare the database model and install meta-data"
+  (setup dburi))
+
 
 ;;;
 ;;; The buildfarm animal CLI

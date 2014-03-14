@@ -53,7 +53,10 @@
 (defvar *acceptor* nil "The Web Server")
 (defvar *server-is-running* nil)
 
-(defun start-server ()
+(defun start-server (&optional interactive
+                     &aux
+                       (access-log (if interactive *terminal-io* *http-logfile*))
+                       (mesg-log   (if interactive *terminal-io* *repo-logfile*)))
   "Start the web server"
   (when *acceptor*
     (error "The web server is already running."))
@@ -64,8 +67,8 @@
   (setf *acceptor* (make-instance 'simpleroutes-acceptor
                                   :port *listen-port*
                                   :document-root *archive-path*
-                                  :access-log-destination *http-logfile*
-                                  :message-log-destination *repo-logfile*))
+                                  :access-log-destination access-log
+                                  :message-log-destination mesg-log))
   (hunchentoot:start *acceptor*)
   (setf *server-is-running* t))
 

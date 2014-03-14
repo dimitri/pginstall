@@ -19,10 +19,10 @@
 (defparameter *archive-path* "/var/cache/pginstall/"
   "Where to store the extensions archives.")
 
-(defparameter *gmake* "/usr/bin/make"
+(defparameter *gmake* "make"
   "Path to the GNU Make command-line tool.")
 
-(defparameter *git* "/usr/bin/git"
+(defparameter *git* "git"
   "Path to the git command-line tool.")
 
 (defparameter *build-root* "/tmp/pginstall/"
@@ -39,12 +39,11 @@
 ;;; Defaults, organized in sections, with proper use facing option names
 ;;;
 (defvar *sections-variables*
-  '(("common"
+  '(("server"
      ("dburi"        *dburi*        validate-dburi)
      ("listen-port"  *listen-port*  parse-integer)
      ("repo-logfile" *repo-logfile* check-file-path)
-     ("http-logfile" *http-logfile* check-file-path))
-    ("repo"
+     ("http-logfile" *http-logfile* check-file-path)
      ("archive-path" *archive-path* check-and-make-directory))
     ("animal"
      ("name"         *animal-name*  identity)
@@ -62,8 +61,7 @@
       (loop :for (section . options) :in *sections-variables*
          :do (loop :for (option var check-fun) :in options
                 :do (let ((value (get-option conf section option)))
-                      (funcall check-fun value)
-                      (setf (symbol-value var) value))))
+                      (setf (symbol-value var) (funcall check-fun value)))))
       conf)))
 
 (defun write-current-config (stream)
@@ -118,7 +116,10 @@
   (ensure-directories-exist
    ;; we want the last component of the filepath in value to be created as
    ;; a directory too, so we play a little trick here:
-   (file-path-namestring (merge-file-paths "foo" value))))
+   (file-path-namestring (merge-file-paths "foo" value)))
+
+  ;; and return value, rather than value/foo
+  value)
 
 (defun check-executable (value)
   "Check that VALUE is the pathname of a valid executable file."
@@ -143,4 +144,6 @@
 (defun check-file-path (path)
   "Check that we can open a file at given PATH."
   (ensure-directories-exist
-   (directory-namestring (file-path-namestring (parse-file-path path)))))
+   (directory-namestring (file-path-namestring (parse-file-path path))))
+  ;; then return path itself
+  path)

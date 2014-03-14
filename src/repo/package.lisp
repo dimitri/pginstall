@@ -73,6 +73,10 @@
            ;; the Main API
            #:select-star
 
+           ;; the Repository Setup API
+           #:*default-extension-list*
+           #:setup
+
            ;; the Animal API
            #:pick-animal-name
            #:register-animal
