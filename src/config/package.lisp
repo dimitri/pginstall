@@ -9,16 +9,17 @@
         #:iolib.os
         #:iolib.pathnames
         #:puri)
-  (:export #:*dburi*
-           #:*listen-port*
+  (:export #:*config-filename*
 
            ;; repository server
-           #:*repo-server*
+           #:*dburi*
+           #:*listen-port*
            #:*archive-path*
            #:*repo-logfile*
            #:*http-logfile*
 
            ;; build animal
+           #:*repo-server*
            #:*animal-name*
            #:*git*
            #:*gmake*

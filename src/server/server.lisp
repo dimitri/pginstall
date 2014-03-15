@@ -14,7 +14,9 @@
 (setf *routeslist*
       (compile-routes
        ;; User website
-       (:GET  "/" 'home)
+       (:GET  "/"          'home)
+       (:GET  "/config"    'config)
+       (:GET  "/help/.*"   'render-doc-page)
        (:GET  "/dist/.*"   'serve-bootstrap-file)
        (:GET  "/pict/.*"   'serve-pict-file)
 
@@ -38,7 +40,7 @@
        (:POST "/api/add/extension" 'api-add-extension)
 
        ;; Buildfarm animal API
-       (:GET  "/api/list/plafform"         'api-list-platform)
+       (:GET  "/api/list/platform"         'api-list-platform)
        (:GET  "/api/list/animal"           'api-list-animal)
 
        (:GET  "/api/list/pgconfig/:animal" 'api-list-pgconfig)

@@ -12,11 +12,14 @@
 
 (defvar *header* (merge-pathnames "header.html" *root*))
 (defvar *footer* (merge-pathnames "footer.html" *root*))
+
 (defvar *dist*   (merge-pathnames
                   (make-pathname :directory '(:relative "bootstrap-3.1.1-dist"))
                   *root*))
 (defvar *pict*   (merge-pathnames
                   (make-pathname :directory '(:relative "images")) *root*))
+
+(defvar *docroot* (asdf:system-relative-pathname :pginstall "doc/"))
 
 (defun serve-bootstrap-file ()
   "Anything under URL /dist/ gets routed here."
@@ -36,24 +39,125 @@
                   (cddr (split-sequence:split-sequence #\/ url-path)))))
     (hunchentoot:handle-static-file (merge-pathnames relative-path *pict*))))
 
-(defun serve-web-page (content)
+;;;
+;;; Tools to render specific set of pages
+;;;
+(defun compute-dashboard-menu (current-url-path)
+  "List all files found in the *DOCROOT* directory and turns the listing
+   into a proper bootstrap menu."
+  (let ((entries '(("/"          . "Dashboard")
+                   ("/extension" . "Extensions")
+                   ("/animal"    . "Animals")
+                   ("/builds"    . "Builds")
+                   ("/archives"  . "Downloads"))))
+    (with-html-output-to-string (s)
+      (htm
+       (:div :class "col-sm-3 col-md-2 sidebar"
+             (:ul :class "nav nav-sidebar"
+                  (loop :for (href . title) :in entries
+                     :for active := (string= href current-url-path)
+                     :do (if active
+                             (htm
+                              (:li :class "active"
+                                   (:a :href (str href) (str title))))
+                             (htm
+                              (:li
+                               (:a :href (str href) (str title))))))))))))
+
+(defun serve-dashboard-page (content)
   "Serve a static page: header then footer."
-  (setf (hunchentoot:content-type*) "text/html")
+  (format t "PLOP: ~s~%" (hunchentoot:script-name*))
   (concatenate 'string
                (read-file-into-string *header*)
+               (compute-dashboard-menu (hunchentoot:script-name*))
                content
                (read-file-into-string *footer*)))
+
+;;;
+;;; Render documentation
+;;;
+(defun compute-help-menu (current-url-path)
+  "List all files found in the *DOCROOT* directory and turns the listing
+   into a proper bootstrap menu."
+  (let ((files (iolib.os:list-directory *docroot*)))
+    (with-html-output-to-string (s)
+      (htm
+       (:div :class "col-sm-3 col-md-2 sidebar"
+             (:ul :class "nav nav-sidebar"
+                  (loop :for file-path :in files
+                     :for title := (file-path-file-name file-path)
+                     :for href := (format nil "/help/~a" title)
+                     :for active := (string= href current-url-path)
+                     :when (string= "md" (file-path-file-type file-path))
+                     :do (if active
+                             (htm
+                              (:li :class "active"
+                                   (:a :href (str href) (str title))))
+                             (htm
+                              (:li
+                               (:a :href (str href) (str title))))))))))))
+
+(defun markdown-to-html (path)
+  "Produce some HTML output from the Markdown document found at PATH."
+  (with-html-output-to-string (s)
+    (htm
+     (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+           (str
+            (multiple-value-bind (md-object html-string)
+                (cl-markdown:markdown path :stream nil)
+              (declare (ignore md-object))
+              html-string))))))
+
+(defun render-doc-page ()
+  "Anything under URL /help/ gets routed here."
+  (let* ((url-path      (hunchentoot:script-name*))
+         (relative-path
+          (format nil "~{~a~^/~}.md"
+                  ;; the path is known to begin with /help/
+                  (cddr (split-sequence:split-sequence #\/ url-path)))))
+    (concatenate 'string
+                 (read-file-into-string *header*)
+                 (compute-help-menu url-path)
+                 (markdown-to-html (merge-pathnames relative-path *docroot*))
+                 (read-file-into-string *footer*))))
 
 ;;;
 ;;; Main entry points for the web server.
 ;;;
 (defun home ()
-  "Server a static page for the home."
-  (serve-web-page (read-file-into-string (merge-pathnames "home.html" *root*))))
+  "Serve a static page for the home."
+  (serve-dashboard-page
+   (read-file-into-string (merge-pathnames "home.html" *root*))))
 
+(defun config ()
+  "Serve the configuration file as a textarea..."
+  (let ((ini (read-file-into-string *config-filename*)))
+    (serve-dashboard-page
+     (with-html-output-to-string (s)
+       (htm
+        (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+              (:h1 :class "page-header" "Repository Server Configuration")
+              (:form :role "config"
+                     (:div :class "pull-right"
+                           :style "margin-bottom: 1em;"
+                           (:button :type "submit"
+                                    :disabled "disabled"
+                                    :class "btn btn-danger"
+                                    "Save and Reload Server Configuration"))
+                     (:div :class "form-group"
+                           (:label :for "config" (str (namestring *config-filename*)))
+                           (:textarea :id "config"
+                                      :class "form-control"
+                                      :rows 15
+                                      (str ini))))))))))
+
+
+;;;
+;;; Some listings
+;;;
 (defun front-list-extensions ()
   "List all our extensions."
-  (serve-web-page
+  (serve-dashboard-page
    (with-html-output-to-string (s)
      (htm
       (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
@@ -90,7 +194,7 @@
                         join platform p on a.platform = p.id
                         join registry r on a.name = r.name
                order by a.name"))))
-    (serve-web-page
+    (serve-dashboard-page
      (with-html-output-to-string (s)
        (htm
         (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"

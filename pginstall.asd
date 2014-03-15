@@ -24,6 +24,7 @@
                  #:closer-mop           ; introspection
                  #:daemon               ; run the repo server in the background
                  #:cl-who               ; HTML production from lisp code
+                 #:cl-markdown          ; HTML production from Markdown docs
 		 )
     :components
     ((:module "lib"

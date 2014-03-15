@@ -17,7 +17,8 @@
         #:pginstall.animal
         #:postmodern
         #:simple-routes
-        #:cl-who)
+        #:cl-who
+        #:iolib.pathnames)
   (:import-from #:iolib.base
                 #:read-file-into-string)
   (:export #:*acceptor*
