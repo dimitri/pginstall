@@ -225,7 +225,7 @@
   "List recent build logs."
   (let ((builds
          (with-pgsql-connection (*dburi*)
-           (query "select bl.id,
+           (query "select bl.id, format('/build/%s', bl.id) as href,
                           to_char(bl.buildstamp, 'YYYY-MM-DD HH24:MI:SS'),
                           e.fullname, a.name, p.os_name, p.os_version, p.arch,
                           bl.log
@@ -246,7 +246,7 @@
                              (:tr (:th "Build Log Information")
                                   (:th "Log")))
                             (:tbody
-                             (loop :for (id stamp extension animal
+                             (loop :for (id href stamp extension animal
                                             os version arch log) :in builds
                                 :do (htm
                                      (:tr
@@ -259,7 +259,9 @@
                                                  (:dl :class "dl-horizontal"
                                                       :style "margin-left: -6em;"
                                                       (:dt "#")
-                                                      (:dd (str id))
+                                                      (:dd (:a :href href
+                                                               (:strong
+                                                                (str id))))
                                                       (:dt "Build date")
                                                       (:dd (str stamp))
                                                       (:dt "Animal")
@@ -270,6 +272,104 @@
                                                       (:dd (str version))
                                                       (:dt "Arch")
                                                       (:dd (str arch))))))
-                                      (:td (:pre :class "pre-scrollable linenums"
+                                      (:td (:pre :class "pre-scrollable"
                                                  :style "white-space: pre-wrap;"
                                                  (str log)))))))))))))))
+
+(defun front-display-build (id)
+  "Display a detailed view of the given build number."
+  (let ((build
+         (with-pgsql-connection (*dburi*)
+           (query "select bl.id,
+                          to_char(bl.buildstamp, 'YYYY-MM-DD HH24:MI:SS'),
+                          e.fullname, a.name, p.os_name, p.os_version, p.arch,
+                          bl.log
+                     from buildlog bl
+                          join extension e on e.id = bl.extension
+                          join animal a    on a.id = bl.animal
+                          join platform p  on p.id = a.platform
+                    where bl.id = $1"
+                  id
+                  :row))))
+    (destructuring-bind (id stamp extension animal os version arch log)
+        build
+      (serve-dashboard-page
+       (with-html-output-to-string (s)
+         (htm
+          (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+                (:h1 :class "page-header" (format nil "Build log ~d" id))
+                (:div :class "table-responsive"
+                      (:table :class "table table-stripped"
+                              (:thead
+                               (:tr (:th "#")
+                                    (:th "Build Date")
+                                    (:th "Extension")
+                                    (:th "Animal")
+                                    (:th "OS")
+                                    (:th "Version")
+                                    (:th "Architecture")))
+                              (:tbody
+                               (:tr
+                                (:td (str id))
+                                (:td (str stamp))
+                                (:td (str extension))
+                                (:td (str animal))
+                                (:td (str os))
+                                (:td (str version))
+                                (:td (str arch))))))
+                (:pre :style "overflow:auto; word-wrap: normal;"
+                      (str log)))))))))
+
+(defun front-list-archives ()
+  "List recent build logs."
+  (let ((archives
+         (with-pgsql-connection (*dburi*)
+           (query "select ar.id,
+                          bl.id, format('/build/%s', bl.id) as blhref,
+                          e.fullname, e.shortname, pgversion,
+                          p.os_name, p.os_version, p.arch
+                     from archive ar
+                          join buildlog bl on bl.id = ar.log
+                          join extension e on e.id = ar.extension
+                          join platform p  on p.id = ar.platform
+                 order by bl.buildstamp desc nulls last
+                    limit 15"))))
+    (serve-dashboard-page
+     (with-html-output-to-string (s)
+       (htm
+        (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+              (:h1 :class "page-header" "Extension Archives")
+              (:div :class "table-responsive"
+                    (:table :class "table table-stripped"
+                            (:thead
+                             (:tr (:th "#")
+                                  (:th "Build log")
+                                  (:th "Extension")
+                                  (:th "Archive")))
+                            (:tbody
+                             (loop :for (archive-id log-id log-href
+                                                    extension shortname
+                                                    pgversion os version arch)
+                                :in archives
+                                :for filename := (format nil
+                                                         "~a--~a--~a--~a--~a.tar.gz"
+                                                         shortname
+                                                         pgversion
+                                                         os
+                                                         version
+                                                         arch)
+                                :for href := (format nil
+                                                     "/api/fetch/~a/~a/~a/~a/~a"
+                                                     shortname
+                                                     pgversion
+                                                     os
+                                                     version
+                                                     arch)
+                                :do (htm
+                                     (:tr
+                                      (:td (str archive-id))
+                                      (:td (:a :href log-href
+                                               (:strong (str log-id))))
+                                      (:td (str extension))
+                                      (:td (:a :href href
+                                               (str filename)))))))))))))))

@@ -25,6 +25,8 @@
        (:GET  "/build"     'front-list-builds)
        (:GET  "/archive"   'front-list-archives)
 
+       (:GET  "/build/:id" 'front-display-build)
+
        ;; Server remote control
        (:GET  "/api/config"             'api-server-config)
        (:GET  "/api/status"             'api-server-status)
