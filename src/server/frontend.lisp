@@ -21,6 +21,13 @@
 
 (defvar *docroot* (asdf:system-relative-pathname :pginstall "doc/"))
 
+(defvar *dashboard-menu* '(("/"          . "Dashboard")
+                           ("/extension" . "Extensions")
+                           ("/animal"    . "Animals")
+                           ("/build"     . "Builds")
+                           ("/archive"   . "Archives"))
+  "An alist of HREF and TITLE for the main dashboard menu.")
+
 (defun serve-bootstrap-file ()
   "Anything under URL /dist/ gets routed here."
   (let* ((url-path      (hunchentoot:script-name*))
@@ -45,24 +52,19 @@
 (defun compute-dashboard-menu (current-url-path)
   "List all files found in the *DOCROOT* directory and turns the listing
    into a proper bootstrap menu."
-  (let ((entries '(("/"          . "Dashboard")
-                   ("/extension" . "Extensions")
-                   ("/animal"    . "Animals")
-                   ("/builds"    . "Builds")
-                   ("/archives"  . "Downloads"))))
-    (with-html-output-to-string (s)
-      (htm
-       (:div :class "col-sm-3 col-md-2 sidebar"
-             (:ul :class "nav nav-sidebar"
-                  (loop :for (href . title) :in entries
-                     :for active := (string= href current-url-path)
-                     :do (if active
-                             (htm
-                              (:li :class "active"
-                                   (:a :href (str href) (str title))))
-                             (htm
-                              (:li
-                               (:a :href (str href) (str title))))))))))))
+  (with-html-output-to-string (s)
+    (htm
+     (:div :class "col-sm-3 col-md-2 sidebar"
+           (:ul :class "nav nav-sidebar"
+                (loop :for (href . title) :in *dashboard-menu*
+                   :for active := (string= href current-url-path)
+                   :do (if active
+                           (htm
+                            (:li :class "active"
+                                 (:a :href (str href) (str title))))
+                           (htm
+                            (:li
+                             (:a :href (str href) (str title)))))))))))
 
 (defun serve-dashboard-page (content)
   "Serve a static page: header then footer."
@@ -219,4 +221,55 @@
                                   (:li :class "list-group-item"
                                        (str version)))))))))))))
 
-
+(defun front-list-builds ()
+  "List recent build logs."
+  (let ((builds
+         (with-pgsql-connection (*dburi*)
+           (query "select bl.id,
+                          to_char(bl.buildstamp, 'YYYY-MM-DD HH24:MI:SS'),
+                          e.fullname, a.name, p.os_name, p.os_version, p.arch,
+                          bl.log
+                     from buildlog bl
+                          join extension e on e.id = bl.extension
+                          join animal a    on a.id = bl.animal
+                          join platform p  on p.id = a.platform
+                 order by bl.buildstamp desc nulls last
+                    limit 15"))))
+    (serve-dashboard-page
+     (with-html-output-to-string (s)
+       (htm
+        (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+              (:h1 :class "page-header" "Build logs")
+              (:div :class "table-responsive"
+                    (:table :class "table table-stripped"
+                            (:thead
+                             (:tr (:th "Build Log Information")
+                                  (:th "Log")))
+                            (:tbody
+                             (loop :for (id stamp extension animal
+                                            os version arch log) :in builds
+                                :do (htm
+                                     (:tr
+                                      (:td
+                                       (:ul :class "list-group"
+                                            (:li :class "list-group-item list-group-item-info"
+                                                 (:h4 :class "list-group-item-heading"
+                                                      (str extension)))
+                                            (:li :class "list-group-item"
+                                                 (:dl :class "dl-horizontal"
+                                                      :style "margin-left: -6em;"
+                                                      (:dt "#")
+                                                      (:dd (str id))
+                                                      (:dt "Build date")
+                                                      (:dd (str stamp))
+                                                      (:dt "Animal")
+                                                      (:dd (str animal))
+                                                      (:dt "OS")
+                                                      (:dd (str os))
+                                                      (:dt "Version")
+                                                      (:dd (str version))
+                                                      (:dt "Arch")
+                                                      (:dd (str arch))))))
+                                      (:td (:pre :class "pre-scrollable linenums"
+                                                 :style "white-space: pre-wrap;"
+                                                 (str log)))))))))))))))

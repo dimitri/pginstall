@@ -22,6 +22,8 @@
 
        (:GET  "/extension" 'front-list-extensions)
        (:GET  "/animal"    'front-list-animals)
+       (:GET  "/build"     'front-list-builds)
+       (:GET  "/archive"   'front-list-archives)
 
        ;; Server remote control
        (:GET  "/api/config"             'api-server-config)
