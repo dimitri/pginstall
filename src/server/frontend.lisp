@@ -210,8 +210,9 @@
                                        (:h4 :class "list-group-item-heading"
                                             (str name)))
                                   (:li :class "list-group-item"
-                                       (:img :src (str pict)
-                                             :alt (str name)))
+                                       (:div :style "width: 150px; height: 150px;"
+                                             (:img :src (str pict)
+                                                   :alt (str name))))
                                   (:li :class "list-group-item"
                                        (str arch)
                                        (:span :class "badge" (str arch-nb)))
