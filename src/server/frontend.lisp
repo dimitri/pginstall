@@ -75,14 +75,17 @@
                                              (str (full-name extension))))
                                     (:td (str (desc extension))))))))))))))
 
-
-
 (defun front-list-animals ()
   "List all our animals."
   (let ((animal-list
          (with-pgsql-connection (*dburi*)
            (query "select a.name, p.os_name, p.os_version, p.arch,
-                          '/pict/' || r.pict
+                          case when substring(r.pict, 1, 7) = 'http://'
+                               then pict
+                               else '/pict/' || r.pict
+                           end as pict,
+                          count(p.os_name) over() as same_os,
+                          count(p.arch)    over() as same_arch
                    from animal a
                         join platform p on a.platform = p.id
                         join registry r on a.name = r.name
@@ -92,22 +95,24 @@
        (htm
         (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
               (:h1 :class "page-header" "Build Farm Animals")
-              (:div :class "table-responsive"
-                    (:table :class "table table-stripped"
-                            (:thead
-                             (:tr (:th "")
-                                  (:th "Name")
-                                  (:th "OS Name")
-                                  (:th "OS Version")
-                                  (:th "Architecture")))
-                            (:tbody
-                             (loop
-                                :for (name os version arch pict) :in animal-list
-                                :do (htm
-                                     (:tr
-                                      (:td (:img :src (str pict)))
-                                      (:th (str name))
-                                      (:td (str os))
-                                      (:td (str version))
-                                      (:td (str arch))))))))))))))
+              (:div :class "row"
+               (loop :for (name os version arch pict os-nb arch-nb) :in animal-list
+                  :do (htm
+                       (:div :class "col-xs-6 col-md-3"
+                             (:ul :class "list-group"
+                                  (:li :class "list-group-item list-group-item-info"
+                                       (:h4 :class "list-group-item-heading"
+                                            (str name)))
+                                  (:li :class "list-group-item"
+                                       (:img :src (str pict)
+                                             :alt (str name)))
+                                  (:li :class "list-group-item"
+                                       (str arch)
+                                       (:span :class "badge" (str arch-nb)))
+                                  (:li :class "list-group-item"
+                                       (str os)
+                                       (:span :class "badge" (str os-nb)))
+                                  (:li :class "list-group-item"
+                                       (str version)))))))))))))
+
 
