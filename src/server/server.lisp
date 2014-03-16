@@ -14,7 +14,7 @@
 (setf *routeslist*
       (compile-routes
        ;; User website
-       (:GET  "/"          'home)
+       (:GET  "/"          'dashboard)
        (:GET  "/config"    'config)
        (:GET  "/help/.*"   'render-doc-page)
        (:GET  "/dist/.*"   'serve-bootstrap-file)
@@ -25,7 +25,8 @@
        (:GET  "/build"     'front-list-builds)
        (:GET  "/archive"   'front-list-archives)
 
-       (:GET  "/build/:id" 'front-display-build)
+       (:GET  "/build/:id"    'front-display-build)
+       (:GET  "/animal/:name" 'front-display-animal)
 
        ;; Server remote control
        (:GET  "/api/config"             'api-server-config)

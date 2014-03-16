@@ -30,7 +30,7 @@
            #:platform
 
            #:pgconfig                   ; the pgconfig class
-           #:pconfig-id
+           #:pgconfig-id
            #:animal-name
            #:pg-config
            #:pg-version

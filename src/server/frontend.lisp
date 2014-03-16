@@ -68,7 +68,6 @@
 
 (defun serve-dashboard-page (content)
   "Serve a static page: header then footer."
-  (format t "PLOP: ~s~%" (hunchentoot:script-name*))
   (concatenate 'string
                (read-file-into-string *header*)
                (compute-dashboard-menu (hunchentoot:script-name*))
@@ -127,9 +126,37 @@
 ;;; Main entry points for the web server.
 ;;;
 (defun home ()
+  "Display some default home page when the setup hasn't been made"
+  "Hello, world?")
+
+(defun dashboard ()
   "Serve a static page for the home."
-  (serve-dashboard-page
-   (read-file-into-string (merge-pathnames "home.html" *root*))))
+  (let ((counts
+         (with-pgsql-connection (*dburi*)
+           (query "select (select count(*) from extension)::text || ' Extensions',
+                          (select count(*) from animal)::text || ' Animals',
+                          (select count(*) from platform)::text || ' Platforms',
+                          (select count(*) from archive)::text || ' Archives'"
+                  :row))))
+    (serve-dashboard-page
+     (with-html-output-to-string (s)
+       (htm
+        (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+              (:h1 :class "page-header" "Repository Server Queue")
+              (loop :for counter :in counts
+                 :for color :in '("progress-bar progress-bar-success"
+                                  "progress-bar progress-bar-info"
+                                  "progress-bar progress-bar-warning"
+                                  "progress-bar progress-bar-danger")
+                 :do (htm
+                      (:div :class "progress"
+                            (:div :class color
+                                  :role "progressbar"
+                                  :aria-valuenow "100"
+                                  :aria-valuemin "0"
+                                  :aria-valuemax "100"
+                                  :style "width: 100%"
+                                  (str counter)))))))))))
 
 (defun config ()
   "Serve the configuration file as a textarea..."
@@ -202,9 +229,62 @@
         (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
               (:h1 :class "page-header" "Build Farm Animals")
               (:div :class "row"
-               (loop :for (name os version arch pict os-nb arch-nb) :in animal-list
-                  :do (htm
-                       (:div :class "col-xs-6 col-md-3"
+                    (loop :for (name os version arch pict os-nb arch-nb) :in animal-list
+                       :for href := (format nil "/animal/~a" name)
+                       :do (htm
+                            (:div :class "col-xs-6 col-md-3"
+                                  (:ul :class "list-group"
+                                       (:li :class "list-group-item list-group-item-info"
+                                            (:h4 :class "list-group-item-heading"
+                                                 (:a :href (str href)
+                                                     (str name))))
+                                       (:li :class "list-group-item"
+                                            (:div :style "width: 150px; height: 150px;"
+                                                  (:a :href (str href)
+                                                      :class "thumbnail"
+                                                     (:img :src (str pict)
+                                                           :alt (str name)))))
+                                       (:li :class "list-group-item"
+                                            (str arch)
+                                            (:span :class "badge" (str arch-nb)))
+                                       (:li :class "list-group-item"
+                                            (str os)
+                                            (:span :class "badge" (str os-nb)))
+                                       (:li :class "list-group-item"
+                                            (str version)))))))))))))
+
+(defun front-display-animal (name)
+  "Display a detailed view about a given animal (by NAME)."
+  (destructuring-bind (animal pgconfig-list)
+      (with-pgsql-connection (*dburi*)
+        (let ((animal (query "select a.name, p.os_name, p.os_version, p.arch,
+                                     case when substring(r.pict, 1, 7) = 'http://'
+                                          then pict
+                                          else '/pict/' || r.pict
+                                      end as pict
+                                from animal a
+                                     join platform p on a.platform = p.id
+                                     join registry r on a.name = r.name
+                               where a.name = $1"
+                             (hunchentoot:url-decode name)
+                             :row))
+              (pgconfig-list
+               (query-dao 'pgconfig "select pgc.*
+                                       from pgconfig pgc
+                                            join animal a on a.id = pgc.animal
+                                      where a.name = $1"
+                          (hunchentoot:url-decode name))))
+          (list animal pgconfig-list)))
+    (serve-dashboard-page
+     (with-html-output-to-string (s)
+       (htm
+        (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+              (:h1 :class "page-header" (format nil "Build Farm Animal ~a" name))
+              (:div :class "row"
+                    (destructuring-bind (name os version arch pict)
+                        animal
+                      (htm
+                       (:div :class "col-xs-6 col-md-4"
                              (:ul :class "list-group"
                                   (:li :class "list-group-item list-group-item-info"
                                        (:h4 :class "list-group-item-heading"
@@ -213,14 +293,37 @@
                                        (:div :style "width: 150px; height: 150px;"
                                              (:img :src (str pict)
                                                    :alt (str name))))
-                                  (:li :class "list-group-item"
-                                       (str arch)
-                                       (:span :class "badge" (str arch-nb)))
-                                  (:li :class "list-group-item"
-                                       (str os)
-                                       (:span :class "badge" (str os-nb)))
-                                  (:li :class "list-group-item"
-                                       (str version)))))))))))))
+                                  (:li :class "list-group-item" (str arch))
+                                  (:li :class "list-group-item" (str os))
+                                  (:li :class "list-group-item" (str version))))
+                       (:div :class "col-xs-6 col-md-8"
+                             (loop :for pgcfg :in pgconfig-list
+                                :do (htm
+                                     (:h3 (str (pg-config pgcfg)))
+                                     (:table :class "table table-bordered table-striped"
+                                             (:colgroup (:col :class "col-xs-1")
+                                                        (:col :class "col-xs-7"))
+                                             (:thead
+                                              (:tr
+                                               (:th "Property")
+                                               (:th "Value")))
+                                             (htm
+                                              (:tbody
+                                               (:tr
+                                                (:th "version")
+                                                (:td (str (pg-version pgcfg))))
+                                               (:tr
+                                                (:th "configure")
+                                                (:td (:code
+                                                      (str (pg-configure pgcfg)))))
+                                               (:tr
+                                                (:th "cc")
+                                                (:td (:code
+                                                      (str (pg-cc pgcfg)))))
+                                               (:tr
+                                                (:th "cflags")
+                                                (:td (:code
+                                                      (str (pg-cflags pgcfg))))))))))))))))))))
 
 (defun front-list-builds ()
   "List recent build logs."
@@ -266,7 +369,9 @@
                                                       (:dt "Build date")
                                                       (:dd (str stamp))
                                                       (:dt "Animal")
-                                                      (:dd (str animal))
+                                                      (:dd (:a :href
+                                                               (str (format nil "/animal/~a" animal))
+                                                               (str animal)))
                                                       (:dt "OS")
                                                       (:dd (str os))
                                                       (:dt "Version")
@@ -314,7 +419,8 @@
                                 (:td (str id))
                                 (:td (str stamp))
                                 (:td (str extension))
-                                (:td (str animal))
+                                (:td (:a :href (str (format nil "/animal/~a" animal))
+                                         (str animal)))
                                 (:td (str os))
                                 (:td (str version))
                                 (:td (str arch))))))
