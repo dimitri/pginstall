@@ -61,7 +61,13 @@
       (loop :for (section . options) :in *sections-variables*
          :do (loop :for (option var check-fun) :in options
                 :do (let ((value (get-option conf section option)))
-                      (setf (symbol-value var) (funcall check-fun value)))))
+                      (setf (symbol-value var)
+                            (handler-case
+                                (funcall check-fun value)
+                              ;; allow reading broken config
+                              (condition (c)
+                                (warn "~a" c)
+                                value))))))
       conf)))
 
 (defun write-current-config (stream)

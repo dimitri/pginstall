@@ -34,7 +34,7 @@
 (defun lsb-release (&optional option)
   "Gets the output of `lsb-release -option`, default to -a."
   (multiple-value-bind (code stdout stderr)
-      (run-program `("lsb-release" ,option))
+      (run-program `("lsb_release" ,option))
     (declare (ignore stderr))
     (when (= 0 code)
       stdout)))
@@ -86,5 +86,6 @@
                       (< 1 (length line))
                       (member (char line 0) comment-prefixes :test #'char=)))
        :collect (cl-ppcre:register-groups-bind (key value)
-                    ("([A-Za-z]*)\\s*[:=]\\s+(.*)" line)
-                  (cons key value)))))
+                    ("([A-Za-z]+[A-Za-z ]*)\\s*[:=]\\s+(.*)" line)
+                  (when (and key value)
+                    (cons key value))))))

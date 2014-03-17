@@ -95,7 +95,9 @@
              (archives
               (build-extension extension-full-name extension-uri)))
         (loop :for (archive-filename . log) :in archives
-           :collect (parse-archive
-                     (upload-archive extension-full-name
-                                     archive-filename
-                                     log)))))))
+           :for archive := (parse-archive
+                            (upload-archive extension-full-name
+                                            archive-filename
+                                            log))
+           :do (format t "Built file: ~s~%~%" archive-filename)
+           :collect archive)))))

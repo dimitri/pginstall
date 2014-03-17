@@ -47,6 +47,7 @@
         (output   (gensym)))
    `(eval-when (:load-toplevel :compile-toplevel :execute)
       (let* ((,fun      (lambda ,bindings
+                          (read-config)
                           (let ((,output (progn ,@body)))
                             (typecase ,output
                               (string (format t "~a~%" ,output))
@@ -92,7 +93,11 @@
     (if match
         (destructuring-bind (fun args) match
           (handler-case
-              (apply fun args)
+              (handler-bind ((warning
+                              #'(lambda (c)
+                                  (format t "WARNING: ~a~%" c)
+                                  (muffle-warning))))
+                (apply fun args))
             (cli-error (e)
               (format t
                       "ERROR: ~a~%~@[DETAIL: ~a~%~]~@[HINT: ~a~%~]"
@@ -173,7 +178,7 @@
     "ask the server for a name for the current animal"
   (discover-animal-setup-and-register-on-server)
   (format t "Welcome aboard ~a!~%" *animal-name*)
-  (format t "See yourself at ~a/animal/pict/~a~%" *repo-server* *animal-name*))
+  (format t "See yourself at ~a/animal/~a~%" *repo-server* *animal-name*))
 
 (define-command (("animal" "find" "pgconfig") ())
     "list the pgconfig setups  registered on the server"
@@ -190,7 +195,15 @@
     "register a new pgconfig path on the server"
   (add-pgconfig-on-server path))
 
+(define-command (("animal" "config") ())
+    "ask the server for a name for the current animal"
+  (write-current-config *standard-output*))
+
 (define-command (("animal" "build") ())
+    "build all extension queued for our platform"
+  (loop :while (build-extension-for-server)))
+
+(define-command (("build") ())
     "build all extension queued for our platform"
   (loop :while (build-extension-for-server)))
 
@@ -207,6 +220,10 @@
   (post-repo-server 'add 'extension :fullname name :uri uri :description desc))
 
 (define-command (("extension" "queue") (name))
+    "queue a build for extension NAME"
+  (query-repo-server 'build name))
+
+(define-command (("queue") (name))
     "queue a build for extension NAME"
   (query-repo-server 'build name))
 

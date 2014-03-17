@@ -86,6 +86,7 @@
                                             '(:CONFIGURE :CC :VERSION :CFLAGS
                                               :DOCDIR :PKGLIBDIR :SHAREDIR)))
   "Build extension in given EXTENSION-ROOT path with PGCONFIG-PATH."
+  (format t "Building extension ~a with ~s~%" extension pgconfig-path)
   (let ((archive-filename)
         (log (make-array '(0) :element-type 'base-char
                          :fill-pointer 0 :adjustable t)))

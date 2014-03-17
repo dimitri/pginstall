@@ -56,7 +56,7 @@
 (defmethod initialize-instance :after ((platform platform) &key)
   "Automatically compute os-name, os-version and arch."
   (unless (slot-boundp platform 'os-name)
-    (destructuring-bind (os-name os-version) (os-name-and-version)
+    (destructuring-bind (os-name os-version)  (os-name-and-version)
       (setf (slot-value platform 'os-name)    os-name
             (slot-value platform 'os-version) os-version
             (slot-value platform 'arch)       (uname "-m")))))
@@ -112,10 +112,10 @@
      (animal      :col-type integer     :reader animal)
      (pg-config   :col-type string      :col-name pg_config
                   :accessor pg-config   :initarg :pg-config)
-     (version     :col-type string      :reader pg-version)
-     (configure   :col-type string      :reader pg-configure)
-     (cc          :col-type string      :reader pg-cc)
-     (cflags      :col-type string      :reader pg-cflags))
+     (version     :col-type string      :reader pg-version   :initarg :version)
+     (configure   :col-type string      :reader pg-configure :initarg :configure)
+     (cc          :col-type string      :reader pg-cc        :initarg :cc)
+     (cflags      :col-type string      :reader pg-cflags    :initarg :cflags))
   (:documentation "a PostgreSQL Server Dev Environment")
   (:metaclass dao-class)
   (:keys id))
