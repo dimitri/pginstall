@@ -29,7 +29,7 @@
 ;;; Support auto-discovery of pgconfig binaries available on the system
 ;;;
 (defparameter *pg-versions*
-  '("8.4" "9.0" "9.1" "9.2" "9.3" "9.4")
+  '("9.1" "9.2" "9.3" "9.4")
   "Candidate PostgreSQL versions.")
 
 (defparameter *pg-bin-paths*

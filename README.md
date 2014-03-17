@@ -186,8 +186,7 @@ in the following places:
   - centos style `/usr/pgsql-X.Y/bin`
   
 Any path entry containing `X.Y` will be used as a pattern and the template
-is replaced in a loop with the value `8.4`, `9.0`, `9.1`, `9.2`, `9.3` and
-`9.4`.
+is replaced in a loop with the value `9.1`, `9.2`, `9.3` and `9.4`.
 
 To add your own `pg_config` entries to the list of build environments used
 by pginstall, tweak the `PATH` under which you run the `pginstall animal
