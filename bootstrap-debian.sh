@@ -24,7 +24,8 @@ sudo apt-get install -y postgresql-9.3 postgresql-contrib-9.3 \
                         devscripts pandoc                     \
                         postgresql-server-dev-all             \
                         libarchive-dev libfixposix-dev        \
-                        libcurl4-openssl-dev
+                        libjansson-dev libcurl4-openssl-dev   \
+                        libbsd-dev
 
 # SBCL
 #

@@ -12,6 +12,7 @@
 #define __PGINSTALL_ARCHIVE_H__
 
 #include "platform.h"
+#include "psprintf.h"
 
 #include <archive.h>
 #include <archive_entry.h>

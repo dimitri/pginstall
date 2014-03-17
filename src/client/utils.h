@@ -11,6 +11,8 @@
 #ifndef __PGINSTALL_UTILS_H__
 #define __PGINSTALL_UTILS_H__
 
+#include "psprintf.h"
+
 #include "utils/builtins.h"
 
 #define MAXPGPATH 1024

@@ -12,6 +12,7 @@
 #define __PGINSTALL_COMMUNICATE_H__
 
 #include "platform.h"
+#include "psprintf.h"
 
 #include "postgres.h"
 #include "nodes/pg_list.h"

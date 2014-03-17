@@ -512,7 +512,7 @@ execute_sql_string(const char *sql, const char *filename)
             }
             else
             {
-#if PG_MAJOR_VERSION == 903
+#if PG_MAJOR_VERSION >= 903
                 ProcessUtility(stmt,
                                sql,
                                PROCESS_UTILITY_QUERY,
@@ -522,7 +522,7 @@ execute_sql_string(const char *sql, const char *filename)
 #elif PG_MAJOR_VERSION < 903
                 ProcessUtility(stmt,
                                sql,
-                               (ProcessUtilityContext) NULL,
+                               NULL,
                                false,       /* not top level */
                                dest,
                                NULL);

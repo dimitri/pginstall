@@ -11,8 +11,14 @@
 #include "pginstall.h"
 #include "platform.h"
 
+#include <stdio.h>
 #include <unistd.h>
 #include <sys/utsname.h>
+
+/* Only include bsd/stdio.h on debian GNU/Linux systems. */
+#ifdef __GLIBC__
+#include <bsd/stdio.h>
+#endif
 
 #include "storage/fd.h"
 
@@ -31,7 +37,7 @@ current_platform(Platform platform)
 
     if (uname(&utsname) == -1)
         ereport(ERROR,
-                (errcode(ERRCODE_SYSTEM_ERROR),
+                (errcode(ERRCODE_IO_ERROR),
                  errmsg("Failed to retrieve uname information"),
                  errdetail("%s", strerror(errno))));
 
@@ -62,7 +68,7 @@ current_platform(Platform platform)
     else
     {
         ereport(ERROR,
-                (errcode(ERRCODE_SYSTEM_ERROR),
+                (errcode(ERRCODE_IO_ERROR),
                  errmsg("System is not supported by pginstall: \"%s\"",
                         utsname.sysname)));
     }
@@ -75,7 +81,7 @@ current_platform(Platform platform)
 char *
 read_debian_version(char *filename)
 {
-    char *p;
+    char *p, *res;
     char *version = (char *)palloc0(MAXVERSION);
     FILE *file;
 
@@ -86,8 +92,13 @@ read_debian_version(char *filename)
                 (errcode_for_file_access(),
                  errmsg("could not open  \"%s\": %m", filename)));
     }
-    fgets(version, MAXVERSION, file);
+    res = fgets(version, MAXVERSION, file);
     FreeFile(file);
+
+    if (res == NULL)
+        ereport(ERROR,
+                (errcode(ERRCODE_NO_DATA),
+                 errmsg("could not read a line in \"%s\"", filename)));
 
     for(p=version; *p != '\0'; p++)
         if (*p == '\n')
@@ -103,7 +114,7 @@ read_debian_version(char *filename)
 char *
 read_centos_version(char *filename)
 {
-    char *version, *next_space;
+    char *version, *next_space, *res;
     char *osversion = (char *)palloc0(MAXVERSION);
     FILE *file;
 
@@ -114,8 +125,13 @@ read_centos_version(char *filename)
                 (errcode_for_file_access(),
                  errmsg("could not open  \"%s\": %m", filename)));
     }
-    fgets(osversion, MAXVERSION, file);
+    res = fgets(osversion, MAXVERSION, file);
     FreeFile(file);
+
+    if (res == NULL)
+        ereport(ERROR,
+                (errcode(ERRCODE_NO_DATA),
+                 errmsg("could not read a line in \"%s\"", filename)));
 
     /* let's breathe and be optimistic and confident */
     version = strchr(strchr(osversion, ' ') + 1, ' ') + 1;

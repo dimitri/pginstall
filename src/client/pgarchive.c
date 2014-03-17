@@ -8,10 +8,10 @@
  * distribution.
  */
 
-#include "archive.h"
 #include "communicate.h"
-#include "platform.h"
+#include "pgarchive.h"
 #include "pginstall.h"
+#include "platform.h"
 #include "utils.h"
 
 #include <stdio.h>

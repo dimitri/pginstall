@@ -11,6 +11,8 @@
 #ifndef __PGINSTALL_FUN_H__
 #define __PGINSTALL_FUN_H__
 
+#include "psprintf.h"
+
 #include "postgres.h"
 #include "nodes/pg_list.h"
 

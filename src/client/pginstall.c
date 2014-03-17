@@ -12,8 +12,8 @@
 #include <unistd.h>
 #include "postgres.h"
 
-#include "archive.h"
 #include "communicate.h"
+#include "pgarchive.h"
 #include "pginstall.h"
 #include "platform.h"
 #include "utils.h"
