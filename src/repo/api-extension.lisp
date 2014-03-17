@@ -31,30 +31,40 @@
 (defun queue-get-work (animal-name)
   "Return an Extension object from the build queue"
   (with-pgsql-connection (*dburi*)
-    (query "with pending as (
-                  select distinct on(q.id, p.id) q.id as queue, p.id as platform
-                    from queue q
-                           CROSS JOIN
-                        (platform p join animal a on a.name = $1
-                                                 and a.platform = p.id)
-                  except
-                  select distinct on(r.queue, p.id) r.queue, p.id as platform
-                    from running r
-                         join animal a on r.animal = a.id
-                         join platform p on p.id = a.platform
-                   limit 1
+    (query "with pending(queue, platform) as (
+                select q.id, p.id
+                  from queue q
+                       cross join (     platform p
+                                   join animal a on a.name = $1
+                                                and a.platform = p.id
+                                  )
+                 except
+
+                 select r.queue, p.id
+                   from running r
+                        join animal a on a.id = r.animal
+                        join platform p on p.id = a.platform
             ),
-                 running as (
-             insert into running(queue, animal)
-                  select queue, (select id from animal where name = $1)
-                    from pending
-               returning running.*
-           )
-           select e.*
-             from extension e
-                  join queue q on q.extension = e.id
-                  join running r on r.queue = q.id"
-               animal-name (:dao extension :single))))
+                 pick_one as (
+               select array_agg(queue) as queue
+                 from pending p
+                      join queue q on q.id = p.queue
+             group by extension
+                limit 1
+            ),
+                 work as (
+              insert into running(queue, animal)
+                   select unnest(po.queue),
+                          (select id from animal where name = $1)
+                from pick_one po
+           returning running.queue
+            )
+               select e.*
+                 from extension e
+                      join queue q on q.extension = e.id
+                      join work w on w.queue = q.id"
+               animal-name
+               (:dao extension :single))))
 
 (defun receive-archive (extension pgversion
                         animal-name os version arch
