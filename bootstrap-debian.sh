@@ -27,6 +27,8 @@ sudo apt-get install -y postgresql-9.3 postgresql-contrib-9.3 \
                         libjansson-dev libcurl4-openssl-dev   \
                         libbsd-dev
 
+sudo apt-get -y build-dep postgresql-9.3
+
 # SBCL
 #
 # we need to backport SBCL from sid to have a recent enough version of the

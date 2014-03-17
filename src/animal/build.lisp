@@ -86,7 +86,7 @@
                                             '(:CONFIGURE :CC :VERSION :CFLAGS
                                               :DOCDIR :PKGLIBDIR :SHAREDIR)))
   "Build extension in given EXTENSION-ROOT path with PGCONFIG-PATH."
-  (format t "Building extension ~a with ~s~%" extension pgconfig-path)
+  (format t "~10tbuilding with ~s~%" pgconfig-path)
   (let ((archive-filename)
         (log (make-array '(0) :element-type 'base-char
                          :fill-pointer 0 :adjustable t)))
@@ -131,6 +131,8 @@
                           (pgconfig-path-list (find-pgconfig-paths))
                           ((animal-name *animal-name*) *animal-name*))
   "Build extension EXTENSION-FULL-NAME, on the build animal."
+  (format t "Building extension ~a~%" extension-full-name)
+  (format t "~10tgit clone ~s~%" extension-uri)
   (let* ((extension      (make-instance 'extension
                                         :full-name extension-full-name
                                         :uri extension-uri))

@@ -99,5 +99,5 @@
                             (upload-archive extension-full-name
                                             archive-filename
                                             log))
-           :do (format t "Built file: ~s~%~%" archive-filename)
+           :do (format t "Built file: ~s~%" archive-filename)
            :collect archive)))))
