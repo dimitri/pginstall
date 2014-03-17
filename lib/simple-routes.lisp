@@ -95,7 +95,7 @@
 	     (if (and (not (eql capturedstrings nil))
 		      (eql treqtype request-type))
 		 (progn 
-		   (return-from simple-router (apply tfntocall (coerce capturedstrings 'list))))))))))
+		   (return-from simple-router (apply tfntocall (mapcar #'hunchentoot:url-decode (coerce capturedstrings 'list)))))))))))
 
 
 (defmethod acceptor-dispatch-request ((acceptor simpleroutes-acceptor) request)

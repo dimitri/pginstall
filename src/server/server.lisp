@@ -14,7 +14,7 @@
 (setf *routeslist*
       (compile-routes
        ;; User website
-       (:GET  "/"          'dashboard)
+       (:GET  "/"          'front-list-build-queue)
        (:GET  "/config"    'config)
        (:GET  "/help/.*"   'render-doc-page)
        (:GET  "/dist/.*"   'serve-bootstrap-file)
@@ -25,8 +25,9 @@
        (:GET  "/build"     'front-list-builds)
        (:GET  "/archive"   'front-list-archives)
 
-       (:GET  "/build/:id"    'front-display-build)
-       (:GET  "/animal/:name" 'front-display-animal)
+       (:GET  "/build/:id"       'front-display-build)
+       (:GET  "/animal/:name"    'front-display-animal)
+       (:GET  "/extension/:name" 'front-display-extension)
 
        ;; Server remote control
        (:GET  "/api/config"             'api-server-config)
@@ -142,11 +143,9 @@
    data in text-plain"
   (declare (list args))
   `(defun ,fun ,args
-     (let ,(loop :for arg :in args
-              :collect (list arg `(hunchentoot:url-decode ,arg)))
-       (with-output-to-string (*standard-output*)
-         (with-condition-handling (:json t :content-type "text/plain")
-           ,@body)))))
+     (with-output-to-string (*standard-output*)
+       (with-condition-handling (:json t :content-type "text/plain")
+         ,@body))))
 
 (defmacro define-api-list (class-name)
   "Define a function that outputs a listing of instances of CLASS-NAME."
@@ -201,7 +200,8 @@
 (defun api-add-pgconfig (animal-name)
   "Handle a :POST query with pg-config object's parameters."
   (setf (hunchentoot:content-type*) "text/plain")
-  (let* ((pg-config    (hunchentoot:post-parameter "pg-config"))
+  (let* ((animal-name  animal-name)
+         (pg-config    (hunchentoot:post-parameter "pg-config"))
          (version      (hunchentoot:post-parameter "version"))
          (configure    (hunchentoot:post-parameter "configure"))
          (cc           (hunchentoot:post-parameter "cc"))
@@ -250,11 +250,11 @@
 
 (defun api-fetch-archive (extension pgversion os version arch)
   "Return the archive file."
-  (let* ((extension (hunchentoot:url-decode extension))
-         (pgversion (hunchentoot:url-decode pgversion))
-         (os        (hunchentoot:url-decode os))
-         (version   (hunchentoot:url-decode version))
-         (arch      (hunchentoot:url-decode arch))
+  (let* ((extension extension)
+         (pgversion pgversion)
+         (os        os)
+         (version   version)
+         (arch      arch)
          (pathname  (archive-pathname extension pgversion os version arch)))
     (when (and pathname (probe-file pathname))
       (hunchentoot:handle-static-file pathname "application/octet-stream"))))

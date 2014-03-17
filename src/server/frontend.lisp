@@ -21,7 +21,7 @@
 
 (defvar *docroot* (asdf:system-relative-pathname :pginstall "doc/"))
 
-(defvar *dashboard-menu* '(("/"          . "Dashboard")
+(defvar *dashboard-menu* '(("/"          . "Build Queue")
                            ("/extension" . "Extensions")
                            ("/animal"    . "Animals")
                            ("/build"     . "Builds")
@@ -184,6 +184,84 @@
 ;;;
 ;;; Some listings
 ;;;
+(defun front-list-build-queue ()
+  "List all our extensions."
+  (let ((queue
+         (with-pgsql-connection (*dburi*)
+           (query
+            "with rstate as (
+               select distinct on(queue, platform, state)
+                      r.queue,
+                      case when r.done is not null
+                           then 'done'
+                           else 'running'
+                       end as state,
+                      p.id as platform,
+                      r.done,
+                      r.started,
+                      a.name as animal
+                 from running r
+                      join queue q on q.id = r.queue
+                      join animal a on r.animal = a.id
+                      join platform p on a.platform = p.id
+             )
+                select distinct on(q.extension, p.id)
+                       q.id as queue,
+                       e.shortname,
+                       coalesce(rs.state, 'not started'),
+                       rs.done,
+                       rs.started,
+                       rs.animal,
+                       p.os_name as os, p.os_version as version, p.arch
+                  from queue q
+                       cross join platform p
+                       join extension e on q.extension = e.id
+                       join animal a    on q.extension = e.id
+                       left join rstate rs on rs.queue = q.id
+                                          and rs.platform = p.id
+              order by q.extension, p.id, e.shortname, q.id, p.id"))))
+   (serve-dashboard-page
+    (with-html-output-to-string (s)
+      (htm
+       (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+             (:h1 :class "page-header" "Extensions Build Queue")
+             (:div :class "table-responsive"
+                   (:table :class "table table-stripped"
+                           (:thead
+                            (:tr (:th "#")
+                                 (:th "Extension")
+                                 (:th "Queue State")
+                                 (:th "Animal")
+                                 (:th "Build date" " " (:em "(or start date)"))
+                                 (:th "OS")
+                                 (:th "Version")
+                                 (:th "Architecture")))
+                           (:tbody
+                            (loop :for (id shortname state done started animal
+                                           os version arch) :in queue
+                               :do (htm
+                                    (:tr
+                                     (:td (str id))
+                                     (:td (:a :href (format nil "/extension/~a" shortname)
+                                              (str shortname)))
+                                     (:td (if (string= state "done")
+                                              (htm (:span :class "label label-success"
+                                                          (str state)))
+                                              (htm (:span :class "label label-warning"
+                                                          (str state)))))
+                                     (:td (if (eq animal :null) (str "")
+                                              (htm
+                                               (:a :href (format nil "/animal/~a" animal)
+                                                   (str animal)))))
+                                     (:td (if (eq done :null)
+                                              (htm
+                                               (:em (str (if (eq :null started) ""
+                                                             started))))
+                                              (str done)))
+                                     (:td (str os))
+                                     (:td (str version))
+                                     (:td (str arch))))))))))))))
+
 (defun front-list-extensions ()
   "List all our extensions."
   (serve-dashboard-page
@@ -203,10 +281,89 @@
                               :do (htm
                                    (:tr
                                     (:td (str (ext-id extension)))
-                                    (:td (str (short-name extension)))
+                                    (:td (:a :href (format nil "/extension/~a"
+                                                           (short-name extension))
+                                             (str (short-name extension))))
                                     (:td (:a :href (uri extension)
                                              (str (full-name extension))))
                                     (:td (str (desc extension))))))))))))))
+
+(defun front-display-extension (name)
+  "Display a detailed view about a given animal (by NAME)."
+  (destructuring-bind (extension archive-list)
+      (with-pgsql-connection (*dburi*)
+        (let ((extension      (query "select id, fullname, shortname, uri, description
+                                        from extension
+                                       where shortname = $1"
+                                     name
+                                     (:dao extension :single)))
+              (archive-list   (query "select a.name as animal, bl.id,
+                                             pgversion,
+                                             p.os_name , p.os_version, p.arch
+                                        from archive ar
+                                             join extension e on ar.extension = e.id
+                                             join platform p on ar.platform = p.id
+                                             join buildlog bl on ar.log = bl.id
+                                             join animal a on bl.animal = a.id
+                                       where e.shortname = $1"
+                                     name)))
+          (list extension archive-list)))
+    (serve-dashboard-page
+     (with-html-output-to-string (s)
+       (htm
+        (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+              (:h1 :class "page-header"
+                   (str (format nil "Extension ~a" name)))
+              (:div :class "row"
+                    (htm
+                     (:div :class "col-xs-6 col-md-5"
+                           (:ul :class "list-group"
+                            (:li :class "list-group-item list-group-item-info"
+                                                 (:h4 :class "list-group-item-heading"
+                                                      (str (short-name extension))))
+                            (:li :class "list-group-item"
+                                 (:dl :class "dl-horizontal"
+                                      :style "margin-left: -6em;"
+                                      (:dt "#")
+                                      (:dd (str (ext-id extension)))
+                                      (:dt "Full Name")
+                                      (:dd (str (full-name extension)))
+                                      (:dt "Git URI")
+                                      (:dd (str (uri extension)))
+                                      (:dt "Description")
+                                      (:dd (str (desc extension)))))))
+                     (:div :class "col-xs-6 col-md-7"
+                           (:table :class "table table-stripped"
+                                   (:thead
+                                    (:tr (:th "Animal")
+                                         (:th "Build Log")
+                                         (:th "Archive")))
+                                   (:tbody
+                                    (loop :for (animal log
+                                                       pgversion os version arch)
+                                       :in archive-list
+
+                                       :for filename := (format nil
+                                                                "~a--~a--~a--~a--~a.tar.gz"
+                                                                (short-name extension)
+                                                                pgversion
+                                                                os
+                                                                version
+                                                                arch)
+                                       :for href := (format nil
+                                                            "/api/fetch/~a/~a/~a/~a/~a"
+                                                            (short-name extension)
+                                                            pgversion
+                                                            os
+                                                            version
+                                                            arch)
+                                       :do (htm
+                                            (:tr (:td (:a :href (format nil "/animal/~a" animal)
+                                                          (str animal)))
+                                                 (:td (:a :href (format nil "/build/~a" log)
+                                                          (str log)))
+                                                 (:td (:a :href href
+                                                          (str filename)))))))))))))))))
 
 (defun front-list-animals ()
   "List all our animals."
@@ -217,8 +374,8 @@
                                then pict
                                else '/pict/' || r.pict
                            end as pict,
-                          count(p.os_name) over() as same_os,
-                          count(p.arch)    over() as same_arch
+                          count(p.os_name) over(partition by p.os_name) as same_os,
+                          count(p.arch)    over(partition by p.arch) as same_arch
                    from animal a
                         join platform p on a.platform = p.id
                         join registry r on a.name = r.name
@@ -266,25 +423,26 @@
                                      join platform p on a.platform = p.id
                                      join registry r on a.name = r.name
                                where a.name = $1"
-                             (hunchentoot:url-decode name)
+                             name
                              :row))
               (pgconfig-list
                (query-dao 'pgconfig "select pgc.*
                                        from pgconfig pgc
                                             join animal a on a.id = pgc.animal
                                       where a.name = $1"
-                          (hunchentoot:url-decode name))))
+                          name)))
           (list animal pgconfig-list)))
     (serve-dashboard-page
      (with-html-output-to-string (s)
        (htm
         (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
-              (:h1 :class "page-header" (format nil "Build Farm Animal ~a" name))
+              (:h1 :class "page-header"
+                   (str (format nil "Build Farm Animal ~a" name)))
               (:div :class "row"
                     (destructuring-bind (name os version arch pict)
                         animal
                       (htm
-                       (:div :class "col-xs-6 col-md-4"
+                       (:div :class "col-xs-6 col-md-3"
                              (:ul :class "list-group"
                                   (:li :class "list-group-item list-group-item-info"
                                        (:h4 :class "list-group-item-heading"
@@ -433,10 +591,11 @@
          (with-pgsql-connection (*dburi*)
            (query "select ar.id,
                           bl.id, format('/build/%s', bl.id) as blhref,
-                          e.fullname, e.shortname, pgversion,
+                          e.fullname, e.shortname, a.name, pgversion,
                           p.os_name, p.os_version, p.arch
                      from archive ar
                           join buildlog bl on bl.id = ar.log
+                          join animal a on bl.animal = a.id
                           join extension e on e.id = ar.extension
                           join platform p  on p.id = ar.platform
                  order by bl.buildstamp desc nulls last
@@ -452,10 +611,11 @@
                              (:tr (:th "#")
                                   (:th "Build log")
                                   (:th "Extension")
+                                  (:th "Built by")
                                   (:th "Archive")))
                             (:tbody
                              (loop :for (archive-id log-id log-href
-                                                    extension shortname
+                                                    extension shortname animal
                                                     pgversion os version arch)
                                 :in archives
                                 :for filename := (format nil
@@ -477,6 +637,9 @@
                                       (:td (str archive-id))
                                       (:td (:a :href log-href
                                                (:strong (str log-id))))
-                                      (:td (str extension))
+                                      (:td (:a :href (format nil "/extension/~a" shortname)
+                                               (str extension)))
+                                      (:td (:a :href (format nil "/animal/~a" animal)
+                                               (str animal)))
                                       (:td (:a :href href
                                                (str filename)))))))))))))))
