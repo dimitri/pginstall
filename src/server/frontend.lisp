@@ -222,7 +222,6 @@
                   from queue q
                        cross join platform p
                        join extension e on q.extension = e.id
-                       join animal a    on q.extension = e.id
                        left join rstate rs on rs.queue = q.id
                                           and rs.platform = p.id
               order by q.extension, p.id, e.shortname, q.id, p.id"))))
@@ -283,7 +282,10 @@
                                 (:th "Full Name")
                                 (:th "Description")))
                           (:tbody
-                           (loop :for extension :in (select-star 'extension)
+                           (loop :for extension :in (sort
+                                                     (select-star 'extension)
+                                                     #'string<
+                                                     :key #'short-name)
                               :do (htm
                                    (:tr
                                     (:td (str (ext-id extension)))
