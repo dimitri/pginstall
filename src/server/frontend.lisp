@@ -123,6 +123,37 @@
                  (read-file-into-string *footer*))))
 
 ;;;
+;;; Some basic URL formating, for filling-in :href attributes
+;;;
+(defun extension-href (extension-or-shortname)
+  (format nil "/extension/~a"
+          (typecase extension-or-shortname
+            (extension (short-name extension-or-shortname))
+            (string    extension-or-shortname))))
+
+(defun animal-href (name)
+  (format nil "/animal/~a" name))
+
+(defun archive-href (extension-short-name pgversion os version arch)
+  (format nil "/api/fetch/~a/~a/~a/~a/~a"
+          extension-short-name
+          pgversion
+          os
+          version
+          arch))
+
+(defun archive-filename (extension-short-name pgversion os version arch)
+  (format nil "~a--~a--~a--~a--~a.tar.gz"
+          extension-short-name
+          pgversion
+          os
+          version
+          arch))
+
+(defun buildlog-href (log-id)
+  (format nil "/build/~a" log-id))
+
+;;;
 ;;; Main entry points for the web server.
 ;;;
 (defun home ()
@@ -242,7 +273,7 @@
                                :do (htm
                                     (:tr
                                      (:td (str id))
-                                     (:td (:a :href (format nil "/extension/~a" shortname)
+                                     (:td (:a :href (extension-href shortname)
                                               (str shortname)))
                                      (:td (if (string= state "done")
                                               (htm (:span :class "label label-success"
@@ -251,7 +282,7 @@
                                                           (str state)))))
                                      (:td (if (eq animal :null) (str "")
                                               (htm
-                                               (:a :href (format nil "/animal/~a" animal)
+                                               (:a :href (animal-href animal)
                                                    (str animal)))))
                                      (:td (if (eq done :null)
                                               (htm
@@ -281,8 +312,7 @@
                               :do (htm
                                    (:tr
                                     (:td (str (ext-id extension)))
-                                    (:td (:a :href (format nil "/extension/~a"
-                                                           (short-name extension))
+                                    (:td (:a :href (extension-href extension)
                                              (str (short-name extension))))
                                     (:td (:a :href (uri extension)
                                              (str (full-name extension))))
@@ -343,24 +373,16 @@
                                                        pgversion os version arch)
                                        :in archive-list
 
-                                       :for filename := (format nil
-                                                                "~a--~a--~a--~a--~a.tar.gz"
-                                                                (short-name extension)
-                                                                pgversion
-                                                                os
-                                                                version
-                                                                arch)
-                                       :for href := (format nil
-                                                            "/api/fetch/~a/~a/~a/~a/~a"
-                                                            (short-name extension)
-                                                            pgversion
-                                                            os
-                                                            version
-                                                            arch)
+                                       :for filename := (archive-filename
+                                                         (short-name extension)
+                                                         pgversion os version arch)
+                                       :for href := (archive-href
+                                                     (short-name extension)
+                                                     pgversion os version arch)
                                        :do (htm
-                                            (:tr (:td (:a :href (format nil "/animal/~a" animal)
+                                            (:tr (:td (:a :href (animal-href animal)
                                                           (str animal)))
-                                                 (:td (:a :href (format nil "/build/~a" log)
+                                                 (:td (:a :href (buildlog-href log)
                                                           (str log)))
                                                  (:td (:a :href href
                                                           (str filename)))))))))))))))))
@@ -387,17 +409,16 @@
               (:h1 :class "page-header" "Build Farm Animals")
               (:div :class "row"
                     (loop :for (name os version arch pict os-nb arch-nb) :in animal-list
-                       :for href := (format nil "/animal/~a" name)
                        :do (htm
                             (:div :class "col-xs-6 col-md-3"
                                   (:ul :class "list-group"
                                        (:li :class "list-group-item list-group-item-info"
                                             (:h4 :class "list-group-item-heading"
-                                                 (:a :href (str href)
+                                                 (:a :href (animal-href name)
                                                      (str name))))
                                        (:li :class "list-group-item"
                                             (:div :style "width: 150px; height: 150px;"
-                                                  (:a :href (str href)
+                                                  (:a :href (animal-href name)
                                                       :class "thumbnail"
                                                      (:img :src (str pict)
                                                            :alt (str name)))))
@@ -487,7 +508,7 @@
   "List recent build logs."
   (let ((builds
          (with-pgsql-connection (*dburi*)
-           (query "select bl.id, format('/build/%s', bl.id) as href,
+           (query "select bl.id,
                           to_char(bl.buildstamp, 'YYYY-MM-DD HH24:MI:SS'),
                           e.fullname, a.name, p.os_name, p.os_version, p.arch,
                           bl.log
@@ -508,7 +529,7 @@
                              (:tr (:th "Build Log Information")
                                   (:th "Log")))
                             (:tbody
-                             (loop :for (id href stamp extension animal
+                             (loop :for (id stamp extension animal
                                             os version arch log) :in builds
                                 :do (htm
                                      (:tr
@@ -521,14 +542,13 @@
                                                  (:dl :class "dl-horizontal"
                                                       :style "margin-left: -6em;"
                                                       (:dt "#")
-                                                      (:dd (:a :href href
+                                                      (:dd (:a :href (buildlog-href id)
                                                                (:strong
                                                                 (str id))))
                                                       (:dt "Build date")
                                                       (:dd (str stamp))
                                                       (:dt "Animal")
-                                                      (:dd (:a :href
-                                                               (str (format nil "/animal/~a" animal))
+                                                      (:dd (:a :href (animal-href animal)
                                                                (str animal)))
                                                       (:dt "OS")
                                                       (:dd (str os))
@@ -561,7 +581,7 @@
        (with-html-output-to-string (s)
          (htm
           (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
-                (:h1 :class "page-header" (format nil "Build log ~d" id))
+                (:h1 :class "page-header" "Build log #" (str id))
                 (:div :class "table-responsive"
                       (:table :class "table table-stripped"
                               (:thead
@@ -577,7 +597,7 @@
                                 (:td (str id))
                                 (:td (str stamp))
                                 (:td (str extension))
-                                (:td (:a :href (str (format nil "/animal/~a" animal))
+                                (:td (:a :href (str (animal-href animal))
                                          (str animal)))
                                 (:td (str os))
                                 (:td (str version))
@@ -618,28 +638,18 @@
                                                     extension shortname animal
                                                     pgversion os version arch)
                                 :in archives
-                                :for filename := (format nil
-                                                         "~a--~a--~a--~a--~a.tar.gz"
-                                                         shortname
-                                                         pgversion
-                                                         os
-                                                         version
-                                                         arch)
-                                :for href := (format nil
-                                                     "/api/fetch/~a/~a/~a/~a/~a"
-                                                     shortname
-                                                     pgversion
-                                                     os
-                                                     version
-                                                     arch)
+                                :for fname := (archive-filename shortname pgversion
+                                                                os version arch)
+                                :for href := (archive-href shortname pgversion
+                                                           os version arch)
                                 :do (htm
                                      (:tr
                                       (:td (str archive-id))
                                       (:td (:a :href log-href
                                                (:strong (str log-id))))
-                                      (:td (:a :href (format nil "/extension/~a" shortname)
+                                      (:td (:a :href (extension-href shortname)
                                                (str extension)))
-                                      (:td (:a :href (format nil "/animal/~a" animal)
+                                      (:td (:a :href (animal-href animal)
                                                (str animal)))
                                       (:td (:a :href href
-                                               (str filename)))))))))))))))
+                                               (str fname)))))))))))))))
