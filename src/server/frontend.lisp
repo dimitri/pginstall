@@ -10,6 +10,7 @@
   (asdf:system-relative-pathname :pginstall "web/")
   "Where to find our static resources")
 
+(defvar *noconf* (merge-pathnames "noconf.html" *root*))
 (defvar *header* (merge-pathnames "header.html" *root*))
 (defvar *footer* (merge-pathnames "footer.html" *root*))
 
@@ -157,37 +158,11 @@
 ;;; Main entry points for the web server.
 ;;;
 (defun home ()
-  "Display some default home page when the setup hasn't been made"
-  "Hello, world?")
-
-(defun dashboard ()
-  "Serve a static page for the home."
-  (let ((counts
-         (with-pgsql-connection (*dburi*)
-           (query "select (select count(*) from extension)::text || ' Extensions',
-                          (select count(*) from animal)::text || ' Animals',
-                          (select count(*) from platform)::text || ' Platforms',
-                          (select count(*) from archive)::text || ' Archives'"
-                  :row))))
-    (serve-dashboard-page
-     (with-html-output-to-string (s)
-       (htm
-        (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
-              (:h1 :class "page-header" "Repository Server Queue")
-              (loop :for counter :in counts
-                 :for color :in '("progress-bar progress-bar-success"
-                                  "progress-bar progress-bar-info"
-                                  "progress-bar progress-bar-warning"
-                                  "progress-bar progress-bar-danger")
-                 :do (htm
-                      (:div :class "progress"
-                            (:div :class color
-                                  :role "progressbar"
-                                  :aria-valuenow "100"
-                                  :aria-valuemin "0"
-                                  :aria-valuemax "100"
-                                  :style "width: 100%"
-                                  (str counter)))))))))))
+  "Display some default home page when the setup hasn't been made, or the
+   build queue."
+  (if *dburi*
+      (front-list-build-queue)
+      (read-file-into-string *noconf*)))
 
 (defun config ()
   "Serve the configuration file as a textarea..."

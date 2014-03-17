@@ -14,7 +14,7 @@
 (setf *routeslist*
       (compile-routes
        ;; User website
-       (:GET  "/"          'front-list-build-queue)
+       (:GET  "/"          'home)
        (:GET  "/config"    'config)
        (:GET  "/help/.*"   'render-doc-page)
        (:GET  "/dist/.*"   'serve-bootstrap-file)
