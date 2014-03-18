@@ -293,6 +293,28 @@
    (with-html-output-to-string (s)
      (htm
       (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+            (:h2 "Add an extension")
+            (:form :role "add-extension" :method "post" :action "/add/extension"
+                   (:div :class "form-group"
+                         (:div :class "row"
+                               (:div :class "col-lg-5 col-md-5"
+                                     (:input :type "text" :class "form-control"
+                                             :name "fullname"
+                                             :placeholder "github.com/user/extension"))
+                               (:div :class "col-lg-5 col-md-5"
+                                     (:input :type "text" :class "form-control"
+                                             :name "uri"
+                                             :placeholder "https://github.com/user/ext.git"))
+                               (:div :class "col-lg-2 col-md-2"
+                                     (:button :class "btn btn-primary"
+                                              :type "button"
+                                              "Add Extension")))
+                         (:div :class "row"
+                               (:div :class "col-lg-12 col-md-12"
+                                     (:input :type "text" :class "form-control"
+                                             :name "description"
+                                             :placeholder "Some Description text."))))))
+      (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
             (:h1 :class "page-header" "Extensions")
             (:div :class "table-responsive"
                   (:table :class "table table-stripped"
@@ -670,4 +692,15 @@
     (setup dburi)
     ;; if we get here, the setup has been successful
     (set-option-by-name "dburi" dburi)
+    (front-list-extensions)))
+
+(defun front-add-extension ()
+  "Add an extension to the database"
+  (let ((full-name     (hunchentoot:post-parameter "fullname"))
+         (uri          (hunchentoot:post-parameter "uri"))
+         (description  (hunchentoot:post-parameter "description")))
+    (with-pgsql-connection (*dburi*)
+      (make-dao 'extension :full-name full-name :uri uri :desc description))
+
+    ;; and redirect to the extension's listing
     (front-list-extensions)))
