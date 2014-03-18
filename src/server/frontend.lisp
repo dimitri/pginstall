@@ -13,6 +13,7 @@
 (defvar *noconf* (merge-pathnames "noconf.html" *root*))
 (defvar *header* (merge-pathnames "header.html" *root*))
 (defvar *footer* (merge-pathnames "footer.html" *root*))
+(defvar *readme* (asdf:system-relative-pathname :pginstall "README.md"))
 
 (defvar *dist*   (merge-pathnames
                   (make-pathname :directory '(:relative "bootstrap-3.1.1-dist"))
@@ -28,6 +29,14 @@
                            ("/build"     . "Builds")
                            ("/archive"   . "Archives"))
   "An alist of HREF and TITLE for the main dashboard menu.")
+
+(defvar *help-menu* '(("/readme"           . "Get Started")
+                      ("/help/faq"         . "F.A.Q.")
+                      ("/help/api"         . "A.P.I.")
+                      ("/help/buildfarm"   . "Buildfarm")
+                      ("/help/installer"   . "Installer")
+                      ("/help/repository"  . "Repository"))
+  "An alist of HREF and TITLE for the help menu.")
 
 (defun serve-bootstrap-file ()
   "Anything under URL /dist/ gets routed here."
@@ -85,29 +94,25 @@
 (defun compute-help-menu (current-url-path)
   "List all files found in the *DOCROOT* directory and turns the listing
    into a proper bootstrap menu."
-  (let ((files (iolib.os:list-directory *docroot*)))
-    (with-html-output-to-string (s)
-      (htm
-       (:div :class "col-sm-3 col-md-2 sidebar"
-             (:ul :class "nav nav-sidebar"
-                  (loop :for file-path :in files
-                     :for title := (file-path-file-name file-path)
-                     :for href := (format nil "/help/~a" title)
-                     :for active := (string= href current-url-path)
-                     :when (string= "md" (file-path-file-type file-path))
-                     :do (if active
-                             (htm
-                              (:li :class "active"
-                                   (:a :href (str href) (str title))))
-                             (htm
-                              (:li
-                               (:a :href (str href) (str title))))))))))))
+  (with-html-output-to-string (s)
+    (htm
+     (:div :class "col-sm-3 col-md-2 sidebar"
+           (:ul :class "nav nav-sidebar"
+                (loop :for (href . title) :in *help-menu*
+                   :for active := (string= href current-url-path)
+                   :do (if active
+                           (htm
+                            (:li :class "active"
+                                 (:a :href (str href) (str title))))
+                           (htm
+                            (:li
+                             (:a :href (str href) (str title)))))))))))
 
 (defun markdown-to-html (path)
   "Produce some HTML output from the Markdown document found at PATH."
   (with-html-output-to-string (s)
     (htm
-     (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
+     (:div :class "col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-2 main"
            (str
             (multiple-value-bind (md-object html-string)
                 (cl-markdown:markdown path :stream nil)
@@ -126,6 +131,14 @@
                  (compute-help-menu url-path)
                  (markdown-to-html (merge-pathnames relative-path *docroot*))
                  (read-file-into-string *footer*))))
+
+(defun readme ()
+  "Render the main README.md document, which ain't located under *docroot*."
+  (concatenate 'string
+               (read-file-into-string *header*)
+               (compute-help-menu (hunchentoot:script-name*))
+               (markdown-to-html *readme*)
+               (read-file-into-string *footer*)))
 
 ;;;
 ;;; Some basic URL formating, for filling-in :href attributes

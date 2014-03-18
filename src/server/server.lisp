@@ -16,6 +16,7 @@
        ;; User website
        (:GET  "/"          'home)
        (:GET  "/config"    'config)
+       (:GET  "/readme"    'readme)
        (:GET  "/help/.*"   'render-doc-page)
        (:GET  "/dist/.*"   'serve-bootstrap-file)
        (:GET  "/pict/.*"   'serve-pict-file)
