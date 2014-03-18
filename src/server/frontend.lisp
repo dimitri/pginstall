@@ -260,26 +260,41 @@
      (htm
       (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
             (:h2 "Add an extension")
-            (:form :role "add-extension" :method "post" :action "/add/extension"
+            (:form :class "form-horizontal" :role "add-extension"
+                   :method "post"
+                   :action "/add/extension"
                    (:div :class "form-group"
-                         (:div :class "row"
-                               (:div :class "col-lg-5 col-md-5"
-                                     (:input :type "text" :class "form-control"
-                                             :name "fullname"
-                                             :placeholder "github.com/user/extension"))
-                               (:div :class "col-lg-5 col-md-5"
-                                     (:input :type "text" :class "form-control"
-                                             :name "uri"
-                                             :placeholder "https://github.com/user/ext.git"))
-                               (:div :class "col-lg-2 col-md-2"
-                                     (:button :class "btn btn-primary"
-                                              :type "button"
-                                              "Add Extension")))
-                         (:div :class "row"
-                               (:div :class "col-lg-12 col-md-12"
-                                     (:input :type "text" :class "form-control"
-                                             :name "description"
-                                             :placeholder "Some Description text."))))))
+                         (:label :for "fullname"
+                                 :class "col-sm-2 control-label"
+                                 "Full Name")
+                         (:div :class "col-sm-10"
+                               (:input :type "text" :class "form-control"
+                                       :id "fullname"
+                                       :name "fullname"
+                                       :placeholder "github.com/user/extension")))
+
+                   (:div :class "form-group"
+                         (:label :for "uri" :class "col-sm-2 control-label"
+                                 "Git URI")
+                         (:div :class "col-sm-10"
+                               (:input :type "text" :class "form-control"
+                                       :id "uri"
+                                       :name "uri"
+                                       :placeholder "https://github.com/user/ext.git")))
+
+                   (:div :class "form-group"
+                         (:label :for "description" :class "col-sm-2 control-label"
+                                 "Description")
+                         (:div :class "col-sm-10"
+                               (:input :type "text" :class "form-control"
+                                       :id "description"
+                                       :name "description"
+                                       :placeholder "Some Description text.")))
+                   (:div :class "form-group"
+                         (:div :class "col-sm-offset-2 col-sm-10"
+                               (:button :class "btn btn-primary"
+                                        :type "submit"
+                                        "Add Extension")))))
       (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
             (:h1 :class "page-header" "Extensions")
             (:div :class "table-responsive"
@@ -662,9 +677,10 @@
 
 (defun front-add-extension ()
   "Add an extension to the database"
+  (format t "PLOP: ~s~%" (hunchentoot:post-parameters hunchentoot:*request*))
   (let ((full-name     (hunchentoot:post-parameter "fullname"))
-         (uri          (hunchentoot:post-parameter "uri"))
-         (description  (hunchentoot:post-parameter "description")))
+        (uri           (hunchentoot:post-parameter "uri"))
+        (description   (hunchentoot:post-parameter "description")))
     (with-pgsql-connection (*dburi*)
       (make-dao 'extension :full-name full-name :uri uri :desc description))
 
