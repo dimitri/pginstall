@@ -29,6 +29,8 @@
        (:GET  "/animal/:name"    'front-display-animal)
        (:GET  "/extension/:name" 'front-display-extension)
 
+       (:GET  "/queue/:name"     'front-queue-build)
+
        ;; Server remote control
        (:GET  "/api/config"             'api-server-config)
        (:GET  "/api/status"             'api-server-status)

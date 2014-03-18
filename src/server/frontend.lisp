@@ -132,6 +132,12 @@
             (extension (short-name extension-or-shortname))
             (string    extension-or-shortname))))
 
+(defun extension-queue-href (extension-or-shortname)
+  (format nil "/queue/~a"
+          (typecase extension-or-shortname
+            (extension (short-name extension-or-shortname))
+            (string    extension-or-shortname))))
+
 (defun animal-href (name)
   (format nil "/animal/~a" name))
 
@@ -195,7 +201,17 @@
   (let ((queue
          (with-pgsql-connection (*dburi*)
            (query
-            "with rstate as (
+            "with queue_max as (
+                 select q.id, q.extension,
+                        max(q.id) over(partition by q.extension)
+                  from queue q
+            ),
+                  recentq as (
+                select *
+                  from queue_max
+                 where id = max
+            ),
+                  rstate as (
                select distinct on(queue, platform, state)
                       r.queue,
                       case when r.done is not null
@@ -219,7 +235,7 @@
                        rs.started,
                        rs.animal,
                        p.os_name as os, p.os_version as version, p.arch
-                  from queue q
+                  from recentq q
                        cross join platform p
                        join extension e on q.extension = e.id
                        left join rstate rs on rs.queue = q.id
@@ -279,6 +295,7 @@
                           (:thead
                            (:tr (:th "#")
                                 (:th "Short Name")
+                                (:th "Queue a build")
                                 (:th "Full Name")
                                 (:th "Description")))
                           (:tbody
@@ -291,6 +308,9 @@
                                     (:td (str (ext-id extension)))
                                     (:td (:a :href (extension-href extension)
                                              (str (short-name extension))))
+                                    (:td (:a :href (extension-queue-href extension)
+                                             :class "btn btn-xs btn-info"
+                                             "Queue Build"))
                                     (:td (:a :href (uri extension)
                                              (str (full-name extension))))
                                     (:td (str (desc extension))))))))))))))
@@ -630,3 +650,12 @@
                                                (str animal)))
                                       (:td (:a :href href
                                                (str fname)))))))))))))))
+
+
+;;;
+;;; Front :POST queries: do the action then redirect to some frontend page.
+;;;
+(defun front-queue-build (name)
+  "Queue an extension's build then hop to the queue listing page."
+  (queue-extension-build name)
+  (front-list-build-queue))
