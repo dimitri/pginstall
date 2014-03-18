@@ -69,6 +69,17 @@ enabled (both client and server), so that you implement a trusted network.
 Once you've setup a trusted network, do you still have security issues to
 talk about?
 
+### What about running some tests before uploading archives?
+
+That's not implemented yet, and it's in the plan of course. The idea is that
+maybe the buildfarm animal shouldn't be the one who tests the extension it
+just compiled, because it has the whole development environment, which is
+different from the typical production environment.
+
+So the current design is to allow for a test farm to be setup, where animals
+this time would pick up just build archives and somehow *promote* them from
+the *untable* to the *stable* repository, or something like that.
+
 ### I have way moar question that I don't see answer for...
 
 Consider sending me an email or opening an issue on the github page for this
