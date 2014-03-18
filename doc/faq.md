@@ -49,6 +49,17 @@ never connects to the Animals, it's always the other way round:
   - then it connects to the repository server to upload the extension's
     archive files.
 
+### How do I update an extension?
+
+You schedule another build.
+
+### Can I add my own extension only locally?
+
+This mode of operation is part of the design, but not yet implemented. You
+will soon be able to *mirror* an existing *upstream* repository server, and
+at the same time to manage a local set of extensions and build queue, with
+your own build farm animals.
+
 ### I have way moar question that I don't see answer for...
 
 Consider sending me an email or opening an issue on the github page for this
