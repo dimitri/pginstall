@@ -18,8 +18,8 @@
        (:GET  "/config"    'config)
        (:GET  "/readme"    'readme)
        (:GET  "/help/.*"   'render-doc-page)
-       (:GET  "/dist/.*"   'serve-bootstrap-file)
-       (:GET  "/pict/.*"   'serve-pict-file)
+       (:GET  "/dist/.*"   'serve-loaded-file)
+       (:GET  "/pict/.*"   'serve-loaded-file)
 
        (:GET  "/extension" 'front-list-extensions)
        (:GET  "/animal"    'front-list-animals)

@@ -6,23 +6,6 @@
 
 (in-package #:pginstall.server)
 
-(defvar *root*
-  (asdf:system-relative-pathname :pginstall "web/")
-  "Where to find our static resources")
-
-(defvar *noconf* (merge-pathnames "noconf.html" *root*))
-(defvar *header* (merge-pathnames "header.html" *root*))
-(defvar *footer* (merge-pathnames "footer.html" *root*))
-(defvar *readme* (asdf:system-relative-pathname :pginstall "README.md"))
-
-(defvar *dist*   (merge-pathnames
-                  (make-pathname :directory '(:relative "bootstrap-3.1.1-dist"))
-                  *root*))
-(defvar *pict*   (merge-pathnames
-                  (make-pathname :directory '(:relative "images")) *root*))
-
-(defvar *docroot* (asdf:system-relative-pathname :pginstall "doc/"))
-
 (defvar *dashboard-menu* '(("/"          . "Build Queue")
                            ("/extension" . "Extensions")
                            ("/animal"    . "Animals")
@@ -38,23 +21,9 @@
                       ("/help/repository"  . "Repository"))
   "An alist of HREF and TITLE for the help menu.")
 
-(defun serve-bootstrap-file ()
+(defun serve-loaded-file ()
   "Anything under URL /dist/ gets routed here."
-  (let* ((url-path      (hunchentoot:script-name*))
-         (relative-path
-          (format nil "~{~a~^/~}"
-                  ;; the path is known to begin with /dist/
-                  (cddr (split-sequence:split-sequence #\/ url-path)))))
-    (hunchentoot:handle-static-file (merge-pathnames relative-path *dist*))))
-
-(defun serve-pict-file ()
-  "Anything under URL /pict/ gets routed here."
-  (let* ((url-path      (hunchentoot:script-name*))
-         (relative-path
-          (format nil "~{~a~^/~}"
-                  ;; the path is known to begin with /pict/
-                  (cddr (split-sequence:split-sequence #\/ url-path)))))
-    (hunchentoot:handle-static-file (merge-pathnames relative-path *pict*))))
+  (handle-loaded-file (hunchentoot:script-name*)))
 
 ;;;
 ;;; Tools to render specific set of pages
@@ -83,10 +52,10 @@
 (defun serve-dashboard-page (content)
   "Serve a static page: header then footer."
   (concatenate 'string
-               (read-file-into-string *header*)
+               *header*
                (compute-dashboard-menu (hunchentoot:script-name*))
                content
-               (read-file-into-string *footer*)))
+               *footer*))
 
 ;;;
 ;;; Render documentation
@@ -108,37 +77,21 @@
                             (:li
                              (:a :href (str href) (str title)))))))))))
 
-(defun markdown-to-html (path)
-  "Produce some HTML output from the Markdown document found at PATH."
-  (with-html-output-to-string (s)
-    (htm
-     (:div :class "col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-2 main"
-           (str
-            (multiple-value-bind (md-object html-string)
-                (cl-markdown:markdown path :stream nil)
-              (declare (ignore md-object))
-              html-string))))))
-
 (defun render-doc-page ()
   "Anything under URL /help/ gets routed here."
-  (let* ((url-path      (hunchentoot:script-name*))
-         (relative-path
-          (format nil "~{~a~^/~}.md"
-                  ;; the path is known to begin with /help/
-                  (cddr (split-sequence:split-sequence #\/ url-path)))))
-    (concatenate 'string
-                 (read-file-into-string *header*)
-                 (compute-help-menu url-path)
-                 (markdown-to-html (merge-pathnames relative-path *docroot*))
-                 (read-file-into-string *footer*))))
+  (concatenate 'string
+               *header*
+               (compute-help-menu (hunchentoot:script-name*))
+               (gethash (hunchentoot:script-name*) *fs*)
+               *footer*))
 
 (defun readme ()
   "Render the main README.md document, which ain't located under *docroot*."
   (concatenate 'string
-               (read-file-into-string *header*)
+               *header*
                (compute-help-menu (hunchentoot:script-name*))
                (markdown-to-html *readme*)
-               (read-file-into-string *footer*)))
+               *footer*))
 
 ;;;
 ;;; Some basic URL formating, for filling-in :href attributes
