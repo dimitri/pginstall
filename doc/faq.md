@@ -60,6 +60,15 @@ will soon be able to *mirror* an existing *upstream* repository server, and
 at the same time to manage a local set of extensions and build queue, with
 your own build farm animals.
 
+### What about security?
+
+The current design about answering your well founded security concerns is to
+run everything behing http proxy with full SSL certificates validation
+enabled (both client and server), so that you implement a trusted network.
+
+Once you've setup a trusted network, do you still have security issues to
+talk about?
+
 ### I have way moar question that I don't see answer for...
 
 Consider sending me an email or opening an issue on the github page for this
