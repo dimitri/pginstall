@@ -60,6 +60,7 @@
            (conf (read-files ini (list filename))))
       (loop :for (section . options) :in *sections-variables*
          :do (loop :for (option var check-fun) :in options
+                :when (has-option-p conf section option)
                 :do (let ((value (get-option conf section option)))
                       (setf (symbol-value var)
                             (handler-case

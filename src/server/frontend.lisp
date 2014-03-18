@@ -53,19 +53,23 @@
 (defun compute-dashboard-menu (current-url-path)
   "List all files found in the *DOCROOT* directory and turns the listing
    into a proper bootstrap menu."
-  (with-html-output-to-string (s)
-    (htm
-     (:div :class "col-sm-3 col-md-2 sidebar"
-           (:ul :class "nav nav-sidebar"
-                (loop :for (href . title) :in *dashboard-menu*
-                   :for active := (string= href current-url-path)
-                   :do (if active
-                           (htm
-                            (:li :class "active"
-                                 (:a :href (str href) (str title))))
-                           (htm
-                            (:li
-                             (:a :href (str href) (str title)))))))))))
+  (when *dburi*
+    ;; all the entries in the menu only work properly with a database
+    ;; connection (that has been setup), so refrain from displaying them
+    ;; when the basic setup has not been done yet.
+    (with-html-output-to-string (s)
+      (htm
+       (:div :class "col-sm-3 col-md-2 sidebar"
+             (:ul :class "nav nav-sidebar"
+                  (loop :for (href . title) :in *dashboard-menu*
+                     :for active := (string= href current-url-path)
+                     :do (if active
+                             (htm
+                              (:li :class "active"
+                                   (:a :href (str href) (str title))))
+                             (htm
+                              (:li
+                               (:a :href (str href) (str title))))))))))))
 
 (defun serve-dashboard-page (content)
   "Serve a static page: header then footer."
@@ -659,3 +663,11 @@
   "Queue an extension's build then hop to the queue listing page."
   (queue-extension-build name)
   (front-list-build-queue))
+
+(defun front-set-dburi ()
+  "Setup our *dburi* parameter, then the DB itlsef."
+  (let ((dburi (hunchentoot:post-parameter "dburi")))
+    (setup dburi)
+    ;; if we get here, the setup has been successful
+    (set-option-by-name "dburi" dburi)
+    (front-list-extensions)))

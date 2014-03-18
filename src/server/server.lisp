@@ -30,6 +30,7 @@
        (:GET  "/extension/:name" 'front-display-extension)
 
        (:GET  "/queue/:name"     'front-queue-build)
+       (:POST "/set/dburi"       'front-set-dburi)
 
        ;; Server remote control
        (:GET  "/api/config"             'api-server-config)
