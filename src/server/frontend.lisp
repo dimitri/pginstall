@@ -138,7 +138,7 @@
    build queue."
   (if *dburi*
       (front-list-build-queue)
-      (read-file-into-string *noconf*)))
+      *noconf*))
 
 (defun config ()
   "Serve the configuration file as a textarea..."
