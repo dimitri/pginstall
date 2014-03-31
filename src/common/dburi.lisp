@@ -77,7 +77,7 @@
 		(declare (ignore slash))
 		(list :dbname dbname)))
 
-(defrule dsn-prefix "postgresql://" (:constant nil))
+(defrule dsn-prefix (or "pgsql://" "postgresql://") (:constant nil))
 
 (defrule db-connection-uri (and dsn-prefix
 				(? dsn-user-password)
