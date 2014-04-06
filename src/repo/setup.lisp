@@ -23,6 +23,17 @@
     (asdf:system-relative-pathname :pginstall "src/repo/model.sql")))
   "List of SQL queries to run to prepare our data model.")
 
+(defparameter *model-table-list*
+  (sort
+   (remove-if #'null
+              (mapcar (lambda (sql) (cl-ppcre:register-groups-bind (table-name)
+                                        ("create table ([^ ]+)" sql)
+                                      table-name))
+                      *model*))
+   #'string<)
+  "List of table names expected to be created by *model*, to allow for
+   checking if the setup has been made.")
+
 (defun setup (&optional dburi)
   "Bootstrap an automated setup so that we can play with a repository server
    and a local animal."

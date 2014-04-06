@@ -136,9 +136,25 @@
 (defun home ()
   "Display some default home page when the setup hasn't been made, or the
    build queue."
-  (if *dburi*
-      (front-list-build-queue)
-      *noconf*))
+  (let* ((ping (when *dburi*
+                 (ignore-errors
+                   (with-pgsql-connection (*dburi*)
+                     (query "select 1" :single)))))
+         ;; maybe the database has been created but no setup has been made
+         ;; therein yet.
+         (table-list (when ping
+                       (with-pgsql-connection (*dburi*)
+                         (query "select relname
+                                   from      pg_class c
+                                        join pg_namespace n
+                                          on c.relnamespace = n.oid
+                                  where n.nspname = 'public'
+                                        and c.relkind = 'r'
+                               order by relname"
+                                :column)))))
+   (if (and ping (equalp *model-table-list* table-list))
+       (front-list-build-queue)
+       *noconf*)))
 
 (defun config ()
   "Serve the configuration file as a textarea..."

@@ -75,6 +75,7 @@
 
            ;; the Repository Setup API
            #:*default-extension-list*
+           #:*model-table-list*
            #:setup
 
            ;; the Animal API
