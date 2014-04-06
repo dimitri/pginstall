@@ -212,21 +212,32 @@
                       join queue q on q.id = r.queue
                       join animal a on r.animal = a.id
                       join platform p on a.platform = p.id
-             )
+             ),
+                   runningq as (
                 select distinct on(q.extension, p.id)
                        q.id as queue,
-                       e.shortname,
-                       coalesce(rs.state, 'not started'),
+                       q.extension,
+                       rs.state,
                        rs.done,
                        rs.started,
                        rs.animal,
                        p.os_name as os, p.os_version as version, p.arch
                   from recentq q
                        cross join platform p
-                       join extension e on q.extension = e.id
                        left join rstate rs on rs.queue = q.id
                                           and rs.platform = p.id
-              order by q.extension, p.id, e.shortname, q.id, p.id"))))
+              order by q.extension, p.id, q.id, p.id
+             )
+               select q.id as queue, e.shortname,
+                      coalesce(rq.state, 'not started') as state,
+                      rq.done, rq.started, rq.animal,
+                      coalesce(rq.os, '') as os,
+                      coalesce(rq.version, '') as version,
+                      rq.arch
+                 from recentq q
+                      join extension e on e.id = q.extension
+                      left join runningq rq on q.id = rq.queue
+                                           and q.extension = rq.extension"))))
    (serve-dashboard-page
     (with-html-output-to-string (s)
       (htm
@@ -267,7 +278,8 @@
                                               (str done)))
                                      (:td (str os))
                                      (:td (str version))
-                                     (:td (str arch))))))))))))))
+                                     (:td (if (eq arch :null) ""
+                                              (str arch)))))))))))))))
 
 (defun front-list-extensions ()
   "List all our extensions."
