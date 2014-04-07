@@ -34,6 +34,13 @@
   "List of table names expected to be created by *model*, to allow for
    checking if the setup has been made.")
 
+(defparameter *api*
+  (cl-ppcre:split
+   ";\\s*"
+   (iolib.base:read-file-into-string
+    (asdf:system-relative-pathname :pginstall "src/repo/api.sql")))
+  "List of SQL queries to run to prepare our data API.")
+
 (defun setup (&optional dburi)
   "Bootstrap an automated setup so that we can play with a repository server
    and a local animal."
@@ -41,6 +48,7 @@
     (with-pgsql-connection (*dburi*)
       (with-transaction ()
         (loop :for sql :in *model* :do (query sql))
+        (loop :for sql :in *api* :do (query sql))
 
         (loop :for extension :in *default-extension-list*
            :do (apply #'make-dao 'extension extension))
