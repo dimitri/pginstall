@@ -31,49 +31,9 @@
 (defun queue-get-work (animal-name)
   "Return an Extension object from the build queue"
   (with-pgsql-connection (*dburi*)
-    (let ((running (query "select e.*
-                             from running r
-                                  join animal a on a.id = r.animal
-                                  join queue q on q.id = r.queue
-                                  join extension e on q.extension = e.id
-                            where     a.name = $1 and done is null"
-                          animal-name
-                          (:dao extension :single))))
-      (or running
-          (query "with pending(queue, platform) as (
-                     select q.id, p.id
-                       from queue q
-                            cross join (     platform p
-                                        join animal a on a.name = $1
-                                                     and a.platform = p.id
-                                       )
-                      except
-
-                      select r.queue, p.id
-                        from running r
-                             join animal a on a.id = r.animal
-                             join platform p on p.id = a.platform
-                 ),
-                      pick_one as (
-                    select array_agg(queue) as queue
-                      from pending p
-                           join queue q on q.id = p.queue
-                  group by extension
-                     limit 1
-                 ),
-                      work as (
-                   insert into running(queue, animal)
-                        select unnest(po.queue),
-                               (select id from animal where name = $1)
-                     from pick_one po
-                returning running.queue
-                 )
-                    select e.*
-                      from extension e
-                           join queue q on q.extension = e.id
-                           join work w on w.queue = q.id"
-                 animal-name
-                 (:dao extension :single))))))
+    (query "select * from pginstall.pick_from_queue($1)"
+           animal-name
+           (:dao extension :single))))
 
 (defun receive-archive (extension pgversion
                         animal-name os version arch
