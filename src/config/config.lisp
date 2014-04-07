@@ -130,12 +130,12 @@
 
 (defun check-executable (value)
   "Check that VALUE is the pathname of a valid executable file."
-  (unless (and (member (file-kind value :follow-symlinks t)
-                       ;; OSX bug in iolib?
-                       '(:regular-file :pipe))
-               (absolute-file-path-p (parse-file-path value))
-               (member :user-exec (file-permissions value)))
-    (error "Not an executable file: ~s" value))
+  (when (absolute-file-path-p (parse-file-path value))
+    (unless (and (member (file-kind value :follow-symlinks t)
+                         ;; OSX bug in iolib?
+                         '(:regular-file :pipe))
+                 (member :user-exec (file-permissions value)))
+      (error "Not an executable file: ~s" value)))
   value)
 
 (defun check-uri (value)
