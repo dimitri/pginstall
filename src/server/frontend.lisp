@@ -144,11 +144,11 @@
          ;; therein yet.
          (table-list (when ping
                        (with-pgsql-connection (*dburi*)
-                         (query "select relname
+                         (query "select nspname || '.' || relname as relname
                                    from      pg_class c
                                         join pg_namespace n
                                           on c.relnamespace = n.oid
-                                  where n.nspname = 'public'
+                                  where n.nspname = 'pginstall'
                                         and c.relkind = 'r'
                                order by relname"
                                 :column)))))
@@ -547,7 +547,8 @@
          (with-pgsql-connection (*dburi*)
            (query "select bl.id,
                           to_char(bl.buildstamp, 'YYYY-MM-DD HH24:MI:SS'),
-                          e.fullname, a.name, p.os_name, p.os_version, p.arch,
+                          e.shortname, e.fullname,
+                          a.name, p.os_name, p.os_version, p.arch,
                           bl.log
                      from buildlog bl
                           join extension e on e.id = bl.extension
@@ -556,7 +557,7 @@
                     where bl.id = $1"
                   id
                   :row))))
-    (destructuring-bind (id stamp extension animal os version arch log)
+    (destructuring-bind (id stamp shortname extension animal os version arch log)
         build
       (serve-dashboard-page
        (with-html-output-to-string (s)
@@ -577,7 +578,8 @@
                                (:tr
                                 (:td (str id))
                                 (:td (str stamp))
-                                (:td (str extension))
+                                (:td (:a :href (extension-href shortname)
+                                         (str extension)))
                                 (:td (:a :href (str (animal-href animal))
                                          (str animal)))
                                 (:td (str os))
@@ -591,7 +593,8 @@
   (let ((archives
          (with-pgsql-connection (*dburi*)
            (query "select ar.id,
-                          bl.id, format('/build/%s', bl.id) as blhref,
+                          bl.buildstamp::date::text,
+                          format('/build/%s', bl.id) as blhref,
                           e.fullname, e.shortname, a.name, pgversion,
                           p.os_name, p.os_version, p.arch
                      from archive ar
@@ -615,7 +618,7 @@
                                   (:th "Built by")
                                   (:th "Archive")))
                             (:tbody
-                             (loop :for (archive-id log-id log-href
+                             (loop :for (archive-id log-stamp log-href
                                                     extension shortname animal
                                                     pgversion os version arch)
                                 :in archives
@@ -628,7 +631,7 @@
                                      (:tr
                                       (:td (str archive-id))
                                       (:td (:a :href log-href
-                                               (:strong (str log-id))))
+                                               (:strong (str log-stamp))))
                                       (:td (:a :href (extension-href shortname)
                                                (str extension)))
                                       (:td (:a :href (animal-href animal)
