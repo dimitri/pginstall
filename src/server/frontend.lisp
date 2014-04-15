@@ -119,7 +119,7 @@
           version
           arch))
 
-(defun archive-filename (extension-short-name pgversion os version arch)
+(defun make-archive-filename (extension-short-name pgversion os version arch)
   (format nil "~a--~a--~a--~a--~a.tar.gz"
           extension-short-name
           pgversion
@@ -354,7 +354,7 @@
                                                        pgversion os version arch)
                                        :in archive-list
 
-                                       :for filename := (archive-filename
+                                       :for filename := (make-archive-filename
                                                          (short-name extension)
                                                          pgversion os version arch)
                                        :for href := (archive-href
@@ -619,8 +619,9 @@
                                                     extension shortname animal
                                                     pgversion os version arch)
                                 :in archives
-                                :for fname := (archive-filename shortname pgversion
-                                                                os version arch)
+                                :for fname := (make-archive-filename
+                                               shortname pgversion
+                                               os version arch)
                                 :for href := (archive-href shortname pgversion
                                                            os version arch)
                                 :do (htm
