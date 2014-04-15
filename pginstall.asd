@@ -54,9 +54,11 @@
                          (:file "api-extension"   :depends-on ("package" "dao"))
                          (:file "api-animal"      :depends-on ("package" "dao"))
                          (:file "pgxn"  :depends-on ("package" "dao"))
+                         (:file "read-sql-files" :depends-on ("package"))
 			 (:file "setup" :depends-on ("package"
                                                      "dao"
                                                      "api-animal"
+                                                     "read-sql-files"
                                                      "pgxn"))))
                (:module animal
                         :depends-on ("common" "repo")

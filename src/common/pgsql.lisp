@@ -8,6 +8,7 @@
 (defmacro with-pgsql-connection ((connection-string) &body body)
   "Runs BODY within an established PostgreSQL connection."
   `(with-connection (parse-pgsql-connection-string ,connection-string)
+     (query "set search_path to pginstall;")
      ,@body))
 
 ;;;

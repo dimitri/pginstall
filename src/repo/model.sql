@@ -1,8 +1,9 @@
 ---
 --- pginstall: The PostgreSQL Extension Repository
 ---
+create schema if not exists pginstall;
 
-create table extension (
+create table pginstall.extension (
   id          serial primary key,
   fullname    text not null unique,
   shortname   text,
@@ -13,30 +14,30 @@ create table extension (
 --
 -- buildfarm animals and their PostgreSQL server dev environments
 --
-create type arch as enum ('x86', 'x86_64', 'arm');
+create type pginstall.arch as enum ('x86', 'x86_64', 'arm');
 
-create table platform (
+create table pginstall.platform (
   id         serial primary key,
   os_name    text,
   os_version text,
-  arch       arch,
+  arch       pginstall.arch,
   unique(os_name, os_version, arch)
 );
 
-create table registry (
+create table pginstall.registry (
     name     text primary key,
     pict     text
 );
 
-create table animal (
+create table pginstall.animal (
   id       serial primary key,
   name     text unique,
-  platform integer references platform(id)  
+  platform integer references pginstall.platform(id)
 );
 
-create table pgconfig (
+create table pginstall.pgconfig (
   id  serial primary key,
-  animal     integer references animal(id),
+  animal     integer references pginstall.animal(id),
   pg_config  text, -- /path/to/9.2/pg_config  
   version    text, -- output of pg_config --version
   configure  text, -- output of pg_config --configure
@@ -48,26 +49,26 @@ create table pgconfig (
 --
 -- build jobs, a kind of queue
 --
-create table queue (
+create table pginstall.queue (
   id        serial primary key,
-  extension integer references extension(id),
+  extension integer references pginstall.extension(id),
   queued    timestamptz default now(),
   unique(extension, queued)
 );
 
-create table running (
+create table pginstall.running (
   id        serial primary key,
-  queue     integer references queue(id) on delete cascade,
-  animal    integer references animal(id),
+  queue     integer references pginstall.queue(id) on delete cascade,
+  animal    integer references pginstall.animal(id),
   started   timestamptz default now(),
   done      timestamptz,
   unique(queue, animal)
 );
     
-create table buildlog (
+create table pginstall.buildlog (
   id         serial primary key,
-  extension  integer references extension(id),
-  animal     integer references animal(id),
+  extension  integer references pginstall.extension(id),
+  animal     integer references pginstall.animal(id),
   buildstamp timestamptz default now(),
   log        text
 );
@@ -75,12 +76,12 @@ create table buildlog (
 --
 -- Once an extension has been built, register its availability
 --
-create table archive (
+create table pginstall.archive (
   id        serial primary key,
-  extension integer references extension(id),
-  platform  integer references platform(id),
+  extension integer references pginstall.extension(id),
+  platform  integer references pginstall.platform(id),
   pgversion text,
-  log       integer references buildlog(id),
+  log       integer references pginstall.buildlog(id),
   archive   text,
   unique(extension, platform, pgversion)
 );

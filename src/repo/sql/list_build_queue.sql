@@ -8,7 +8,7 @@ create or replace function pginstall.list_build_queue
    out animal     text,
    out os         text,
    out version    text,
-   out arch       arch
+   out arch       pginstall.arch
  )
   returns setof record
   language sql
@@ -16,7 +16,7 @@ as $$
 with queue_max as (
      select q.id, q.extension,
             max(q.id) over(partition by q.extension)
-      from queue q
+      from pginstall.queue q
 ),
       recentq as (
     select *
@@ -34,10 +34,10 @@ with queue_max as (
           r.done,
           r.started,
           a.name as animal
-     from running r
-          join queue q on q.id = r.queue
-          join animal a on r.animal = a.id
-          join platform p on a.platform = p.id
+     from pginstall.running r
+          join pginstall.queue q on q.id = r.queue
+          join pginstall.animal a on r.animal = a.id
+          join pginstall.platform p on a.platform = p.id
  ),
        runningq as (
     select distinct on(q.extension, p.id)
@@ -49,7 +49,7 @@ with queue_max as (
            rs.animal,
            p.os_name as os, p.os_version as version, p.arch
       from recentq q
-           cross join platform p
+           cross join pginstall.platform p
            left join rstate rs on rs.queue = q.id
                               and rs.platform = p.id
   order by q.extension, p.id, q.id, p.id
@@ -61,7 +61,7 @@ with queue_max as (
           coalesce(rq.version, '') as version,
           rq.arch
      from recentq q
-          join extension e on e.id = q.extension
+          join pginstall.extension e on e.id = q.extension
           left join runningq rq on q.id = rq.queue
                                and q.extension = rq.extension;
 $$;
