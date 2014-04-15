@@ -103,4 +103,4 @@
              :collect archive))
 
         ;; nothing in the queue
-        (format t "No extension to build on this platform."))))
+        (format t "No extension to build for me.~%"))))
