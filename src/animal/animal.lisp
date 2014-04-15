@@ -5,6 +5,17 @@
 (in-package #:pginstall.animal)
 
 ;;;
+;;; Facilities
+;;;
+(defun get-animal-uri (&optional (animal-name *animal-name*))
+  "Return the URI where to browse for the animal specs on the server."
+  (when *repo-server*
+    (puri:merge-uris
+     (format nil "/animal/~a" (drakma:url-encode animal-name :utf-8))
+     (puri:parse-uri *repo-server*))))
+
+
+;;;
 ;;; Client side implementation of the API.
 ;;;
 (defun discover-animal-setup-and-register-on-server ()

@@ -30,5 +30,7 @@
            #:add-pgconfig-on-server
            #:get-extension-to-build
            #:upload-archive
+           #:get-animal-uri
+           #:build-extension
            #:build-extension-for-server))
 

@@ -16,6 +16,7 @@
 (defvar *help-menu* '(("/readme"           . "Get Started")
                       ("/help/faq"         . "F.A.Q.")
                       ("/help/api"         . "A.P.I.")
+                      ("/help/extension"   . "Extensions")
                       ("/help/buildfarm"   . "Buildfarm")
                       ("/help/installer"   . "Installer")
                       ("/help/repository"  . "Repository"))

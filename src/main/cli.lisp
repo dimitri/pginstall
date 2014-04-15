@@ -178,7 +178,7 @@
     "ask the server for a name for the current animal"
   (discover-animal-setup-and-register-on-server)
   (format t "Welcome aboard ~a!~%" *animal-name*)
-  (format t "See yourself at ~a/animal/~a~%" *repo-server* *animal-name*))
+  (format t "See yourself at ~a~%" (get-animal-uri)))
 
 (define-command (("animal" "find" "pgconfig") ())
     "list the pgconfig setups  registered on the server"
@@ -203,9 +203,33 @@
     "build all extension queued for our platform"
   (loop :while (build-extension-for-server)))
 
-(define-command (("build") ())
-    "build all extension queued for our platform"
-  (loop :while (build-extension-for-server)))
+(define-command (("build") (fullname))
+    "build extension given by FULLNAME"
+  (let ((logdir      (merge-pathnames "logs/" *build-root*))
+        (github-uri (format nil "https://~a.git" fullname)))
+
+    (ensure-directories-exist logdir)
+
+    (loop :for (filename . log) :in (build-extension fullname github-uri)
+       :for logfile := (merge-pathnames
+                        (make-pathname :name (extension-short-name fullname)
+                                       :type "txt")
+                        logdir)
+       :do (with-open-file (s logfile
+                              :direction :output
+                              :if-does-not-exist :create
+                              :if-exists :supersede)
+             (write-sequence log s))
+       :do (format t "~%Built: ~a ~% logs: ~a~%" filename logfile))))
+
+(define-command (("whoami") ())
+    "display information about this local animal"
+  (let ((platform (make-instance 'platform)))
+    (format t "Animal Name: ~a~%" *animal-name*)
+    (format t "        URI: ~a~%" (get-animal-uri))
+    (format t "         OS: ~a~%" (os-name platform))
+    (format t "    Version: ~a~%" (os-version platform))
+    (format t "       Arch: ~a~%" (arch platform))))
 
 
 ;;;

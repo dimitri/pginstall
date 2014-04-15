@@ -16,7 +16,7 @@
 (defparameter *listen-port* 8042
   "Port bound by the repository server, exposing the HTTP protocol.")
 
-(defparameter *archive-path* "/var/cache/pginstall/"
+(defparameter *archive-path* "/tmp/var/cache/pginstall/"
   "Where to store the extensions archives.")
 
 (defparameter *gmake* "make"

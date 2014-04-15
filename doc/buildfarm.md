@@ -10,7 +10,7 @@ The build farm is composed of a herd of animals that are given packaging
 work to do. The Animals must connect and use the API to get the next build
 job from the queue, which is done with the following command:
 
-    pginstall build
+    pginstall animal build
 
 When the build is done, the result usually is a set of archives files, one
 per PostgreSQL Major Version. Using the API, those files are then uploaded
@@ -26,6 +26,7 @@ things:
 
     pginstall config set server http://pginstall.mycompany.com:8042/
     pginstall animal register
+    pginstall animal whoami
 
 If you have installed several version of the `make` and `git` tools and want
 to make sure that pginstall will pick the right one, you can use the
