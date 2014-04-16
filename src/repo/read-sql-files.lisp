@@ -65,11 +65,21 @@ create function f(text)
    language sql
 as $function$
 BEGIN
-    RETURN ($1 ~ $q$[\t\r\n\v\\]$q$);
+    RETURN ($1 ~ $q$[\\t\\r\\n\\v\\\\]$q$);
 END;
 $function$;")
         (parse-query s (make-parser)))
 
+
+Another test case for the classic quotes:
+
+      (with-pgsql-connection ("pgsql:///pginstall")
+        (query
+         (with-input-from-string (s "select E'\\';' as \";\";")
+           (parse-query s)) :alists))
+
+      should return
+      (((:|;| . "';")))
 |#
 
 (defun parse-query (stream &optional (state (make-parser)))
@@ -89,12 +99,33 @@ $function$;")
      - TAG    reading a tag that could be an embedded $x$ tag or a closing tag
      - EOT    End Of Tag
      - EQT    Eat Quoted Text
-     - EOQ    done reading the query"
+     - EDQ    Eat Double-Quoted Text (identifiers)
+     - EOQ    done reading the query
+     - ESC    read espaced text (with backslash)"
   (handler-case
       (loop
          :until (eq :eoq (parser-state state))
          :for char := (read-char stream)
          :do (case char
+               (#\\       (case (parser-state state)
+                            (:esc    (setf (parser-state state) :eqt))
+                            (:eqt    (setf (parser-state state) :esc)))
+
+                          (write-char char (parser-stream state)))
+
+               (#\'       (case (parser-state state)
+                            (:eat    (setf (parser-state state) :eqt))
+                            (:esc    (setf (parser-state state) :eqt))
+                            (:eqt    (setf (parser-state state) :eat)))
+
+                          (write-char char (parser-stream state)))
+
+               (#\"       (case (parser-state state)
+                            (:eat    (setf (parser-state state) :edq))
+                            (:edq    (setf (parser-state state) :eat)))
+
+                          (write-char char (parser-stream state)))
+
                (#\$       (case (parser-state state)
                             (:eat    (setf (parser-state state) :tag))
                             (:eqt    (setf (parser-state state) :tag))
