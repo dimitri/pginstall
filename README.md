@@ -242,3 +242,92 @@ that *pginstall* does for you:
      Mac OS X | 10.9.1     | x86_64
     (1 row)
 
+
+### Full Example
+
+First install from the local archive only, without contacting the repository
+server, because we have `pginstall.serve_from_archive_dir` set to *true*. We
+begin with a local build of the *prefix* extension then go on to install it.
+
+    $ ./build/bin/pginstall build github.com/dimitri/prefix
+    Building extension github.com/dimitri/prefix
+              git clone "https://github.com/dimitri/prefix.git"
+              building with "/Users/dim/pgsql/ddl/bin/pg_config"
+    
+    Built: /tmp/pginstall/prefix--9.4devel--Mac_OS_X--10.9.2--x86_64.tar.gz 
+     logs: /tmp/pginstall/logs/prefix.txt
+    
+    $ psql pginstall
+    
+    ~# set client_min_messages to 'debug1';
+    SET
+    
+    ~# select name, setting from pg_settings where name ~ 'pginstall';
+                   name               |               setting                
+    ----------------------------------+--------------------------------------
+     pginstall.archive_dir            | /tmp/pginstall
+     pginstall.control_dir            | /Users/dim/pgsql/ddl/share/extension
+     pginstall.custom_path            | /tmp/pginstall/custom
+     pginstall.extension_dir          | /tmp/pginstall/extension
+     pginstall.repository             | http://localhost:8042/
+     pginstall.serve_from_archive_dir | on
+     pginstall.sudo                   | on
+     pginstall.whitelist              | 
+    (8 rows)
+    
+    ~# create extension prefix;
+    DEBUG:  00000: Unpacking archive "/tmp/pginstall/prefix--9.4devel--Mac_OS_X--10.9.2--x86_64.tar.gz"
+    LOCATION:  extract, pgarchive.c:165
+    DEBUG:  00000: Extracting "prefix.control" to "/Users/dim/pgsql/ddl/share/extension/prefix.control"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix.so" to "/tmp/pginstall/extension/prefix/prefix.so"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix--unpackaged--1.2.0.sql" to "/tmp/pginstall/extension/prefix/prefix--unpackaged--1.2.0.sql"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix--1.2.0.sql" to "/tmp/pginstall/extension/prefix/prefix--1.2.0.sql"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix--1.1--1.2.0.sql" to "/tmp/pginstall/extension/prefix/prefix--1.1--1.2.0.sql"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/TESTS.md" to "/tmp/pginstall/extension/prefix/TESTS.md"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/README.md" to "/tmp/pginstall/extension/prefix/README.md"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Rewriting control file "/Users/dim/pgsql/ddl/share/extension/prefix.control"
+    LOCATION:  rewrite_control_file, utils.c:172
+    CREATE EXTENSION
+
+Now, let's prevent the local PostgreSQL from being allowed to use the local
+archive repository as its source for installing, forcing it to contact the
+repository server instead.
+
+Note that the repository server here has built the *prefix* extension
+independantly.
+
+    ~# set pginstall.serve_from_archive_dir to false;
+    SET
+    
+    ~# drop extension prefix;
+    DROP EXTENSION
+    
+    ~# create extension prefix;
+    DEBUG:  00000: curl -O "/tmp/pginstall/prefix--9.4devel--Mac_OS_X--10.9.2--x86_64.tar.gz" http://localhost:8042/api/fetch/prefix/9.4devel/Mac%20OS%20X/10.9.2/x86_64
+    LOCATION:  download, communicate.c:184
+    DEBUG:  00000: Unpacking archive "/tmp/pginstall/prefix--9.4devel--Mac_OS_X--10.9.2--x86_64.tar.gz"
+    LOCATION:  extract, pgarchive.c:165
+    DEBUG:  00000: Extracting "prefix.control" to "/Users/dim/pgsql/ddl/share/extension/prefix.control"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix.so" to "/tmp/pginstall/extension/prefix/prefix.so"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix--unpackaged--1.2.0.sql" to "/tmp/pginstall/extension/prefix/prefix--unpackaged--1.2.0.sql"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix--1.2.0.sql" to "/tmp/pginstall/extension/prefix/prefix--1.2.0.sql"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/prefix--1.1--1.2.0.sql" to "/tmp/pginstall/extension/prefix/prefix--1.1--1.2.0.sql"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/TESTS.md" to "/tmp/pginstall/extension/prefix/TESTS.md"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Extracting "prefix/README.md" to "/tmp/pginstall/extension/prefix/README.md"
+    LOCATION:  extract, pgarchive.c:187
+    DEBUG:  00000: Rewriting control file "/Users/dim/pgsql/ddl/share/extension/prefix.control"
+    LOCATION:  rewrite_control_file, utils.c:172
+    CREATE EXTENSION

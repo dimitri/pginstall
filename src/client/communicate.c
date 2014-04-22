@@ -247,7 +247,7 @@ download(const char *filename, const char *baseurl, int nbargs, ...)
  * Fetch available extensions for this platform
  */
 List *
-list_available_extensions(Platform platform)
+list_available_extensions_on_repository(Platform platform)
 {
     List *result = NIL;
 

@@ -10,6 +10,7 @@
 
 #include "communicate.h"
 #include "fun.h"
+#include "pgarchive.h"
 
 #include "postgres.h"
 
@@ -95,13 +96,57 @@ pginstall_available_extensions(PG_FUNCTION_ARGS)
     Tuplestorestate *tupstore;
     MemoryContext per_query_ctx;
     MemoryContext oldcontext;
-    List *extensions;
+    List *extensions = NIL;
     ListCell *lc;
     PlatformData platform;
 
     /* Fetch the list of available extensions */
     current_platform(&platform);
-    extensions = list_available_extensions(&platform);
+
+    if (pginstall_serve_from_archive_dir)
+        extensions = list_available_extensions_in_archive_dir(&platform);
+
+    /*
+     * Don't duplicate extensions (based on shortname), keep only the local
+     * cache one in case of duplicates.
+     *
+     * XXX: expensive algorithm, we might want to switch to using hash tables
+     * here at some point.
+     */
+    if (pginstall_repository != NULL && strcmp(pginstall_repository, "") != 0)
+    {
+        List *repo_exts = list_available_extensions_on_repository(&platform);
+
+        if (extensions == NIL)
+            extensions = repo_exts;
+        else
+        {
+            List *keep = NIL;
+            ListCell *lc2;
+
+            foreach(lc, repo_exts)
+            {
+                pginstall_extension *ext = (pginstall_extension *) lfirst(lc);
+
+                bool keep_this_one = true;
+
+                foreach(lc2, extensions)
+                {
+                    pginstall_extension *ext2 =
+                        (pginstall_extension *) lfirst(lc2);
+
+                    if (strcmp(ext->shortname, ext2->shortname) == 0)
+                    {
+                        keep_this_one = false;
+                        break;
+                    }
+                    if (keep_this_one)
+                        keep = lappend(keep, ext);
+                }
+            }
+            extensions = list_concat(extensions, keep);
+        }
+    }
 
     /* check to see if caller supports us returning a tuplestore */
     if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
@@ -140,13 +185,19 @@ pginstall_available_extensions(PG_FUNCTION_ARGS)
         memset(nulls, 0, sizeof(nulls));
 
         /* id */
-        values[0] = Int64GetDatumFast(ext->id);
+        if (ext->id == -1)
+            nulls[0] = true;
+        else
+            values[0] = Int64GetDatumFast(ext->id);
 
         /* shortname */
         values[1] = CStringGetTextDatum(ext->shortname);
 
         /* fullname */
-        values[2] = CStringGetTextDatum(ext->fullname);
+        if (ext->fullname == NULL)
+            nulls[2] = true;
+        else
+            values[2] = CStringGetTextDatum(ext->fullname);
 
         /* uri */
         values[3] = CStringGetTextDatum(ext->uri);

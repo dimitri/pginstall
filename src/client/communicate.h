@@ -11,6 +11,7 @@
 #ifndef __PGINSTALL_COMMUNICATE_H__
 #define __PGINSTALL_COMMUNICATE_H__
 
+#include "pginstall.h"
 #include "platform.h"
 #include "psprintf.h"
 
@@ -20,16 +21,7 @@
 #define BUFFER_SIZE  (4 * 1024)  /* 4 KB */
 #define URL_SIZE     256
 
-typedef struct
-{
-	long id;
-	char *shortname;
-	char *fullname;
-	char *uri;
-	char *description;
-} pginstall_extension;
-
-List *list_available_extensions(Platform platform);
+List *list_available_extensions_on_repository(Platform platform);
 void download_archive(const char *filename,
 					  const char *extname,
 					  Platform platform);

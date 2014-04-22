@@ -57,6 +57,15 @@ To be able to use the pginstall extension you need to edit your
 
   HTTP URL to use to fetch available extensions and archives from the
   repository server, something like `http://pginstall.postgresql.org/`.
+  
+* `pginstall.serve_from_archive_dir`
+
+  Allow the `archive_dir` repository to be used as a local repository
+  server. Any archive file that has been made available here will be used
+  directly. Beware that this will prevent refreshing files from the
+  `pginstall.repository` server, acting as the authoritative source for the
+  archive files found in there. Useful when using `pginstall build
+  <fullname>` in a development environment.
 
 * `pginstall.sudo`
 

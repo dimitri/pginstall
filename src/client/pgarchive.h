@@ -19,5 +19,6 @@
 
 void download_and_unpack_archive(const char *extname);
 void extract(const char *extname, const char *filename);
+List *list_available_extensions_in_archive_dir(Platform platform);
 
 #endif

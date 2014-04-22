@@ -33,5 +33,19 @@ extern char *pginstall_repository;
 extern char *pginstall_custom_path;
 extern char *pginstall_whitelist;
 extern bool pginstall_sudo;
+extern bool pginstall_serve_from_archive_dir;
+
+/*
+ * Used to list extensions, either from parsing archive file names on-disk or
+ * from parsing JSON responses from the repository API.
+ */
+typedef struct
+{
+	long id;
+	char *shortname;
+	char *fullname;
+	char *uri;
+	char *description;
+} pginstall_extension;
 
 #endif

@@ -14,10 +14,13 @@
 #include "platform.h"
 #include "utils.h"
 
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "postgres.h"
+
+#include "storage/fd.h"
 
 static int copy_data(struct archive *ar, struct archive *aw);
 
@@ -58,8 +61,31 @@ download_and_unpack_archive(const char *extname)
                                 escape_filename(platform.os_version),
                                 escape_filename(platform.arch));
 
-    /* Always try to download the newest known archive file */
-    download_archive(archive_filename, extname, &platform);
+    /*
+     * The local repository might be added to directly by the pginstall build
+     * client, and pginstall.serve_from_archive_dir allows to setup the
+     * pginstall.archive_dir as a local authoritative source.
+     *
+     * Given that, we only download an archive file when
+     *
+     *  1. we have a pginstall.repository
+     *  2. pginstall.serve_from_archive_dir is false
+     *  3. pginstall.serve_from_archive_dir is true but we don't have the
+     *     needed file locally
+     */
+    if (pginstall_repository != NULL && strcmp(pginstall_repository, "") != 0)
+    {
+        if (pginstall_serve_from_archive_dir
+            && access(archive_filename, R_OK) == 0)
+        {
+            /* no download here. */
+            (void)0;
+        }
+        else
+        {
+            download_archive(archive_filename, extname, &platform);
+        }
+    }
 
     /*
      * Even if we didn't find any extension's archive file for our platform on
@@ -234,5 +260,105 @@ escape_filename(const char *str)
         if (result[i] == ' ')
             result[i] = '_';
     }
+    return result;
+}
+
+/*
+ * Parse pginstall.archive_dir filenames and return a list of
+ * pginstall_extension structures for each archive filename found.
+ */
+static bool
+is_extension_archive_filename(const char *filename)
+{
+    int l = strlen(filename);
+
+    return l > 7 && (strcmp(filename+l-7, ".tar.gz") == 0);
+}
+
+List *list_available_extensions_in_archive_dir(Platform platform)
+{
+    List *result = NIL;
+	DIR		   *dir;
+	struct dirent *de;
+
+    char *pf_name    = escape_filename(platform->os_name);
+    char *pf_version = escape_filename(platform->os_version);
+    char *pf_arch    = escape_filename(platform->arch);
+
+	dir = AllocateDir(pginstall_archive_dir);
+	while ((de = ReadDir(dir, pginstall_archive_dir)) != NULL)
+	{
+        pginstall_extension *ext;
+        char *extname   = NULL;
+        char *pgversion = NULL;
+        char *os        = NULL ;
+        char *version   = NULL;
+        char *arch      = NULL;
+        char *ptr       = NULL;
+
+		/* must be a .tar.gz file ... */
+		if (!is_extension_archive_filename(de->d_name))
+			continue;
+
+        /* extract extension name from filename */
+        extname = pstrdup(de->d_name);
+
+        if ((ptr = strstr(extname, "--")) != NULL)
+        {
+            *ptr = '\0';
+            pgversion = ptr+2;
+        }
+
+        /* parse and check pgversion */
+        if (pgversion && (ptr = strstr(pgversion, "--")) != NULL)
+        {
+            *ptr = '\0';
+            os = ptr+2;
+
+            if (strcmp(pgversion, PG_VERSION) != 0)
+                continue;
+        }
+
+        /* parse and check os name */
+        if (os && (ptr = strstr(os, "--")) != NULL)
+        {
+            *ptr = '\0';
+            version = ptr+2;
+
+            if (strcmp(os, pf_name) != 0)
+                continue;
+        }
+
+        /* parse and check os version */
+        if (version && (ptr = strstr(version, "--")) != NULL)
+        {
+            *ptr = '\0';
+            arch = ptr+2;
+
+            if (strcmp(version, pf_version) != 0)
+                continue;
+        }
+
+        /* parse and check arc */
+        if (arch && (ptr = strstr(arch, ".")) != NULL)
+        {
+            *ptr = '\0';
+
+            if (strcmp(arch, pf_arch) != 0)
+                continue;
+        }
+
+        ext = (pginstall_extension *)palloc(sizeof(pginstall_extension));
+
+        ext->id          = -1;
+        ext->shortname   = pstrdup(extname);
+        ext->fullname    = NULL;
+        ext->uri         = pstrdup(de->d_name);
+        ext->description = NULL;
+
+        result = lappend(result, ext);
+	}
+	FreeDir(dir);
+
     return result;
 }

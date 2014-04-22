@@ -58,13 +58,14 @@
  */
 PG_MODULE_MAGIC;
 
-char *pginstall_archive_dir   = NULL;
-char *pginstall_control_dir   = NULL;
-char *pginstall_extension_dir = NULL;
-char *pginstall_repository    = NULL;
-char *pginstall_custom_path   = NULL;
-char *pginstall_whitelist     = NULL;
-bool  pginstall_sudo          = false;
+char *pginstall_archive_dir            = NULL;
+char *pginstall_control_dir            = NULL;
+char *pginstall_extension_dir          = NULL;
+char *pginstall_repository             = NULL;
+char *pginstall_custom_path            = NULL;
+char *pginstall_whitelist              = NULL;
+bool  pginstall_sudo                   = false;
+bool  pginstall_serve_from_archive_dir = false;
 
 static ProcessUtility_hook_type prev_ProcessUtility = NULL;
 
@@ -186,6 +187,17 @@ _PG_init(void)
                              "Allow privilege escalation to install extensions",
                              "",
                              &pginstall_sudo,
+                             false,
+                             PGC_SUSET,
+                             GUC_NOT_IN_SAMPLE,
+                             NULL,
+                             NULL,
+                             NULL);
+
+    DefineCustomBoolVariable("pginstall.serve_from_archive_dir",
+                             "Avoid contacting the repository server when the needed archive file is already available locally",
+                             "",
+                             &pginstall_serve_from_archive_dir,
                              false,
                              PGC_SUSET,
                              GUC_NOT_IN_SAMPLE,
