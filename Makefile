@@ -14,7 +14,7 @@ endif
 
 BUILDDIR   = build
 LIBS       = $(BUILDDIR)/libs.stamp
-BUILDAPP   = $(BUILDDIR)/buildapp
+BUILDAPP   = $(BUILDDIR)/bin/buildapp
 MANIFEST   = $(BUILDDIR)/manifest.ql
 PGINSTALL  = $(BUILDDIR)/bin/pginstall
 QLDIR      = $(BUILDDIR)/quicklisp
