@@ -205,6 +205,9 @@ download(const char *filename, const char *baseurl, int nbargs, ...)
         curl_easy_cleanup(curl);
         curl_global_cleanup();
 
+        /* we have create an empty archive file that we now need to remove */
+        unlink(filename);
+
         ereport(ERROR,
                 (errcode(ERRCODE_IO_ERROR),
                  errmsg("unable to request data from \"%s\"", escaped_url),
@@ -216,6 +219,9 @@ download(const char *filename, const char *baseurl, int nbargs, ...)
     {
         curl_easy_cleanup(curl);
         curl_global_cleanup();
+
+        /* we have create an empty archive file that we now need to remove */
+        unlink(filename);
 
         ereport(ERROR,
                 (errcode(ERRCODE_IO_ERROR),
