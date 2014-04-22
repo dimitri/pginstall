@@ -237,42 +237,23 @@
    (with-html-output-to-string (s)
      (htm
       (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
-            (:h2 "Add an extension")
             (:form :class "form-horizontal" :role "add-extension"
                    :method "post"
                    :action "/add/extension"
                    (:div :class "form-group"
-                         (:label :for "fullname"
-                                 :class "col-sm-2 control-label"
-                                 "Full Name")
-                         (:div :class "col-sm-10"
+                         (:label :for "exturi"
+                                 :class "col-sm-3 control-label"
+                                 "Add a new extension")
+                         (:div :class "input-group"
                                (:input :type "text" :class "form-control"
-                                       :id "fullname"
-                                       :name "fullname"
-                                       :placeholder "github.com/user/extension")))
-
-                   (:div :class "form-group"
-                         (:label :for "uri" :class "col-sm-2 control-label"
-                                 "Git URI")
-                         (:div :class "col-sm-10"
-                               (:input :type "text" :class "form-control"
-                                       :id "uri"
-                                       :name "uri"
-                                       :placeholder "https://github.com/user/ext.git")))
-
-                   (:div :class "form-group"
-                         (:label :for "description" :class "col-sm-2 control-label"
-                                 "Description")
-                         (:div :class "col-sm-10"
-                               (:input :type "text" :class "form-control"
-                                       :id "description"
-                                       :name "description"
-                                       :placeholder "Some Description text.")))
-                   (:div :class "form-group"
-                         (:div :class "col-sm-offset-2 col-sm-10"
-                               (:button :class "btn btn-primary"
-                                        :type "submit"
-                                        "Add Extension")))))
+                                       :id "exturi"
+                                       :name "exturi"
+                                       :placeholder "https://github.com/dimitri/base36")
+                               (:span :class "input-group-btn"
+                                      (:button :class "btn btn-primary"
+                                               :type "submit"
+                                               "Add Extension"))))
+                   ))
       (:div :class "col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main"
             (:h1 :class "page-header" "Extensions")
             (:div :class "table-responsive"
@@ -657,12 +638,22 @@
     (set-option-by-name "dburi" dburi)
     (front-list-extensions)))
 
+(defun parse-extension-uri (uri)
+  "Parse given URI as a github http project uri"
+  (let ((uri (puri:parse-uri uri)))
+    (when (string= "github.com" (puri:uri-host uri))
+      (destructuring-bind (abs user repo) (puri:uri-parsed-path uri)
+        (declare (ignore abs))
+        (let ((metadata
+               (github:api-command (format nil "/repos/~a/~a" user repo))))
+          (values (format nil "github.com/~a" (getf metadata :full-name))
+                  (getf metadata :clone-url )
+                  (getf metadata :description)))))))
+
 (defun front-add-extension ()
   "Add an extension to the database"
-  (format t "PLOP: ~s~%" (hunchentoot:post-parameters hunchentoot:*request*))
-  (let ((full-name     (hunchentoot:post-parameter "fullname"))
-        (uri           (hunchentoot:post-parameter "uri"))
-        (description   (hunchentoot:post-parameter "description")))
+  (multiple-value-bind (full-name uri description)
+      (parse-extension-uri (hunchentoot:post-parameter "exturi"))
     (with-pgsql-connection (*dburi*)
       (make-dao 'extension :full-name full-name :uri uri :desc description))
 

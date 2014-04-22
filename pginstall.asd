@@ -25,6 +25,7 @@
                  #:daemon               ; run the repo server in the background
                  #:cl-who               ; HTML production from lisp code
                  #:cl-markdown          ; HTML production from Markdown docs
+                 #:cl-github-v3         ; GitHub API
 		 )
     :components
     ((:module "lib"
