@@ -188,8 +188,10 @@ Another test case for the classic quotes:
     (loop
        for line = (read-line s nil)
        while line
-       do (if (and (> (length line) 3)
-		   (string= "\\i " (subseq line 0 3)))
+       do (if (or (and (> (length line) 3)
+                       (string= "\\i " (subseq line 0 3)))
+                  (and (> (length line) 4)
+                       (string= "\\ir " (subseq line 0 4))))
 	      (let ((include-filename
 		     (merge-pathnames (subseq line 3)
 				      (directory-namestring filename))))
