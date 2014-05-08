@@ -17,9 +17,8 @@
         #:pginstall.animal
         #:postmodern
         #:simple-routes
-        #:cl-who
-        #:iolib.pathnames)
-  (:import-from #:iolib.base
+        #:cl-who)
+  (:import-from #:alexandria
                 #:read-file-into-string
                 #:read-file-into-byte-vector)
   (:import-from #:split-sequence

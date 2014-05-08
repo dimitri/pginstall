@@ -20,7 +20,7 @@
   "Parse given SCRIPT and replace strings \"AS '$libdir/...'\" to \"AS
    'MODULE_PATHNAME/...'\"."
   (format t "rewrite-libdir ~s ~s~%" source target)
-  (let ((content (read-file-into-string source)))
+  (let ((content (uiop:read-file-string source)))
     (with-open-file (newscript target
                                :direction :output
                                :if-exists :supersede
@@ -41,16 +41,15 @@
                           rewrite-$libdir)
   "Copy FILES into DIRECTORY and return the list of files copied."
   (loop for file-path in files
-     for target = (file-path-namestring
-                   (merge-file-paths
-                    (file-path-namestring (file-path-file file-path))
-                    directory))
-     for source = (file-path-namestring file-path)
+     for target = (make-pathname :directory (directory-namestring directory)
+                                 :name (pathname-name file-path)
+                                 :type (pathname-type file-path))
+     for source = (namestring file-path)
      do (if rewrite-$libdir
             ($libdir-to-module-pathname source target)
             (progn
               (format t "cp ~s ~s~%" source target)
-              (iolib.base:copy-file source target)))
+              (uiop:copy-file source target)))
      collect (enough-namestring target base-dir)))
 
 (defun archive-extdir (extension archive-dir)
@@ -68,7 +67,7 @@
 
     ;; first, cleanup
     (when (probe-file archive-dir)
-      (delete-files archive-dir :recursive t))
+      (uiop:delete-directory-tree archive-dir :validate t))
 
     ;; now, prepare the target directories we need, and return the archive-dir
     (prog1
@@ -86,11 +85,7 @@
     (when (probe-file target)
       (delete-file target))
 
-    (multiple-value-bind (code stdout stderr)
-        (run-program `("gzip" "-9" ,filename))
-      (declare (ignore stdout))
-      (unless (= 0 code)
-        (error "Error during gzip -9: ~a~%" stderr)))
+    (run-command `("gzip" "-9" ,filename) :cwd (directory-namestring filename))
 
     ;; return the new filename
     target))
@@ -103,18 +98,16 @@
 ;;;
 (defmacro with-filter-list-directory (dir &body filter)
   "Walk DIR and evaluates BODY, then return FILES."
-  (let ((push-files (gensym)))
-    `(when (directory-exists-p ,dir)
-       (let (files)
-         (let ((,push-files
-                (lambda (name kind parent depth)
-                  (declare (ignorable name kind parent depth))
-                  (when ,@filter
-                    (let ((filename
-                           (merge-file-paths name (merge-file-paths parent ,dir))))
-                      (push filename files))))))
-           (walk-directory ,dir ,push-files))
-         files))))
+  `(when (uiop:directory-exists-p ,dir)
+     (let ((files))
+       (flet ((collectp  (directory) (declare (ignore directory)) t)
+              (recursep  (directory) (declare (ignore directory)) t)
+              (collector (directory)
+                (loop :for name :in (uiop:directory-files directory)
+                   :when ,@ (progn filter)
+                   :do (push name files))))
+         (uiop:collect-sub*directories ,dir #'collectp #'recursep #'collector))
+       files)))
 
 (defun prepare-archive-files (extension archive-dir docdir pkglibdir sharedir)
   "Prepare files installed with PGXS command `make install` to take part of
@@ -126,21 +119,21 @@
   (let* ((extname        (short-name extension))
          (control-files  (with-filter-list-directory sharedir
                            (and
-                            (string= (file-path-file-name name) extname)
-                            (string= (file-path-file-type name) "control"))))
+                            (string= (pathname-name name) extname)
+                            (string= (pathname-type name) "control"))))
 
          (module-files   (with-filter-list-directory pkglibdir
-                           (string= (file-path-file-type name) "so")))
+                           (string= (pathname-type name) "so")))
 
          (script-files   (with-filter-list-directory sharedir
                            (or
-                            (string= (file-path-file-type name) "sql")
+                            (string= (pathname-type name) "sql")
                             (and
-                             (string/= (file-path-file-name name) extname)
-                             (string= (file-path-file-type name) "control")))))
+                             (string/= (pathname-name name) extname)
+                             (string= (pathname-type name) "control")))))
 
          (doc-files      (with-filter-list-directory docdir
-                           (eq kind :regular-file)))
+                           (not (uiop:directory-pathname-p name))))
 
          (archive-extdir (archive-extdir extension archive-dir)))
 

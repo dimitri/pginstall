@@ -6,8 +6,6 @@
   (:use #:cl
         #:pginstall.common
         #:py-configparser
-        #:iolib.os
-        #:iolib.pathnames
         #:puri)
   (:export #:*config-filename*
 

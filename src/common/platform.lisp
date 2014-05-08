@@ -17,11 +17,10 @@
 (defun uname (option)
   "Gets the output of `uname -option`."
   (multiple-value-bind (code stdout stderr)
-      (run-program `("uname" ,option))
-    (declare (ignore stderr))
-    (when (= 0 code)
-      (with-input-from-string (s stdout)
-        (read-line s)))))
+      (run-command `("uname" ,option))
+    (declare (ignore code stderr))
+    (with-input-from-string (s stdout)
+      (read-line s))))
 
 
 ;;
@@ -34,10 +33,9 @@
 (defun lsb-release (&optional option)
   "Gets the output of `lsb-release -option`, default to -a."
   (multiple-value-bind (code stdout stderr)
-      (run-program `("lsb_release" ,option))
-    (declare (ignore stderr))
-    (when (= 0 code)
-      stdout)))
+      (run-command `("lsb_release" ,option))
+    (declare (ignore code stderr))
+    stdout))
 
 (defun lsb-name-and-version ()
   "Return a list of os-name and os-version, for Linux systems."
@@ -52,16 +50,15 @@
 (defun sw-vers (&optional option)
   "Gets the output of `sw_vers -option`."
   (multiple-value-bind (code stdout stderr)
-      (run-program (if option `("sw_vers" ,option) "sw_vers"))
-    (declare (ignore stderr))
-    (when (= 0 code)
-      (if option
-          ;; read a single line of output
-          (with-input-from-string (s stdout)
-            (read-line s))
+      (run-command (if option `("sw_vers" ,option) '("sw_vers")))
+    (declare (ignore code stderr))
+    (if option
+        ;; read a single line of output
+        (with-input-from-string (s stdout)
+          (read-line s))
 
-          ;; no option, return the whole thing
-          stdout))))
+        ;; no option, return the whole thing
+        stdout)))
 
 (defun macosx-name-and-version ()
   "Return a list of os-name and os-version."

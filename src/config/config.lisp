@@ -121,21 +121,10 @@
   "Check that VALUE is a valid pathname and create a directory if it doesn't
    already exists."
   (ensure-directories-exist
-   ;; we want the last component of the filepath in value to be created as
-   ;; a directory too, so we play a little trick here:
-   (file-path-namestring (merge-file-paths "foo" value)))
-
-  ;; and return value, rather than value/foo
-  value)
+   (uiop:ensure-directory-pathname (uiop:parse-unix-namestring value))))
 
 (defun check-executable (value)
   "Check that VALUE is the pathname of a valid executable file."
-  (when (absolute-file-path-p (parse-file-path value))
-    (unless (and (member (file-kind value :follow-symlinks t)
-                         ;; OSX bug in iolib?
-                         '(:regular-file :pipe))
-                 (member :user-exec (file-permissions value)))
-      (error "Not an executable file: ~s" value)))
   value)
 
 (defun check-uri (value)
@@ -151,6 +140,6 @@
 (defun check-file-path (path)
   "Check that we can open a file at given PATH."
   (ensure-directories-exist
-   (directory-namestring (file-path-namestring (parse-file-path path))))
+   (directory-namestring (uiop:parse-unix-namestring path)))
   ;; then return path itself
   path)

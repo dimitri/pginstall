@@ -19,41 +19,36 @@
               (declare (ignore md-object))
               html-string))))))
 
-(defun file-name-sans-extension (url-path)
-  (format nil "~{~a~^.~}" (butlast (split-sequence #\. url-path))))
-
 (defun load-static-file (fs pathname url-path)
   "Load given PATHNAME contents at URL-PATH in FS."
   (cond
-    ((string= "md" (file-path-file-type pathname))
-     (setf (gethash (file-name-sans-extension url-path) fs)
+    ((string= "md" (pathname-type pathname))
+     (setf (gethash (uiop:split-name-type url-path) fs)
            (markdown-to-html (read-file-into-string pathname))))
     (t
      (setf (gethash url-path fs)
            (read-file-into-byte-vector pathname)))))
 
+(defun pathname-to-url (pathname url-path)
+  "Transform given PATHNAME into an URL at which to serve it within URL-PATH."
+  (multiple-value-bind (flag path-list last-component file-namestring-p)
+      (uiop:split-unix-namestring-directory-components (namestring pathname))
+    (declare (ignore flag file-namestring-p))
+    (format nil "~a~{/~a~}/~a" url-path path-list last-component)))
+
 (defun load-static-directory (fs root url-path)
   "Walk PATH and load all files found in there as binary sequence, FS being
    an hash table referencing the full path against the bytes."
-  (flet ((load-content (name-key kind parent depth)
-           (declare (ignore depth))
-           (let ((file-type (file-path-file-type name-key)))
-             (when (and (eq kind :regular-file)
-                        (not (string= "zip" file-type)))
-               (let ((fullname
-                      (file-path-namestring
-                       (merge-file-paths name-key
-                                         (merge-file-paths parent root))))
-                     (full-url-path
-                      (file-path-namestring
-                       (format nil "~a/~{~a/~}~a"
-                               url-path
-                               (remove-if (lambda (path)
-                                            (string= "." path))
-                                          (split-sequence #\/ (file-path-namestring parent)))
-                               name-key))))
-                 (load-static-file fs fullname full-url-path))))))
-    (iolib.os:walk-directory root #'load-content)))
+  (flet ((collectp  (dir) (declare (ignore dir)) t)
+         (recursep  (dir) (declare (ignore dir)) t)
+         (collector (dir)
+           (loop :for pathname :in (uiop:directory-files dir)
+              :unless (or (uiop:directory-pathname-p pathname)
+                          (string= "zip "(pathname-type pathname)))
+              :do (let ((url (pathname-to-url
+                              (uiop:enough-pathname pathname root) url-path)))
+                    (load-static-file fs pathname url)))))
+    (uiop:collect-sub*directories root #'collectp #'recursep #'collector)))
 
 
 ;;;

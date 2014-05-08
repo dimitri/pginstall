@@ -12,8 +12,6 @@
 		 #:local-time		; UDP date parsing
 		 #:py-configparser	; Read old-style INI config files
                  #:split-sequence       ; split strings
-                 #:iolib                ; I/O library
-                 #:iolib.os             ; OS level interface, pathnames
                  #:puri                 ; URI validation and manipulation
                  #:cl-ppcre             ; Regular Expressions
                  #:alexandria           ; Some utilities
@@ -37,8 +35,9 @@
               ((:module common
 			:components
 			((:file "package")
-                         (:file "pgconfig" :depends-on ("package"))
-                         (:file "platform" :depends-on ("package"))
+                         (:file "run-command" :depends-on ("package"))
+                         (:file "pgconfig" :depends-on ("package" "run-command"))
+                         (:file "platform" :depends-on ("package" "run-command"))
                          (:file "dburi" :depends-on ("package"))
 			 (:file "pgsql" :depends-on ("package" "dburi"))))
                (:module config

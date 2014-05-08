@@ -19,11 +19,7 @@
         #:pginstall.common
         #:pginstall.config
         #:pginstall.repo
-        #:postmodern
-        #:iolib.os
-        #:iolib.pathnames)
-  (:import-from #:iolib.base
-                #:read-file-into-string)
+        #:postmodern)
   (:export #:discover-animal-setup-and-register-on-server
            #:register-animal-on-server
            #:list-pgconfigs-on-server

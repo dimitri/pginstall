@@ -23,7 +23,7 @@
                         buildlog archive-filename archive)
   "Register a new extension's archive and move the file at the expected place."
   (let ((archive-full-name (merge-pathnames archive-filename *archive-path*)))
-    (iolib.base:copy-file archive archive-full-name)
+    (uiop:copy-file archive archive-full-name)
 
     (with-pgsql-connection (*dburi*)
       (query "select * from pginstall.register_build($1, $2, $3, $4, $5, $6, $7, $8)"

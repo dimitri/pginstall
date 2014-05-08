@@ -74,27 +74,31 @@
 
 (defun upload-archive (extension-full-name archive-filename buildlog)
   "Upload an archive file."
-  (let ((archive                        ; the multi-part POST data
-         (list (pathname archive-filename)
-               :content-type "application/octet-stream"
-               :filename (file-path-file archive-filename))))
+  (let* ((filename (nth 2
+                        (multiple-value-list
+                         (uiop:split-unix-namestring-directory-components
+                          (namestring (pathname archive-filename))))))
+         (archive                       ; the multi-part POST data
+          (list (pathname archive-filename)
+                :content-type "application/octet-stream"
+                :filename filename)))
 
-   (cl-ppcre:register-groups-bind (pgversion os-name os-version arch)
-       ("^.*--(.*)--(.*)--(.*)--(.*).tar.gz" (file-path-file archive-filename))
-     (drakma:http-request (build-api-uri 'upload 'archive)
-                          :method :post
-                          :form-data t
-                          :content-length t
-                          :parameters `(("archive"    . ,archive)
-                                        ("buildlog"   . ,buildlog)
-                                        ("extension"  . ,extension-full-name)
-                                        ("pgversion"  . ,pgversion)
-                                        ("animal"     . ,*animal-name*)
-                                        ("os-name"    . ,(substitute #\Space
-                                                                     #\_
-                                                                     os-name))
-                                        ("os-version" . ,os-version)
-                                        ("arch"       . ,arch))))))
+    (cl-ppcre:register-groups-bind (pgversion os-name os-version arch)
+        ("^.*--(.*)--(.*)--(.*)--(.*).tar.gz" filename)
+      (drakma:http-request (build-api-uri 'upload 'archive)
+                           :method :post
+                           :form-data t
+                           :content-length t
+                           :parameters `(("archive"    . ,archive)
+                                         ("buildlog"   . ,buildlog)
+                                         ("extension"  . ,extension-full-name)
+                                         ("pgversion"  . ,pgversion)
+                                         ("animal"     . ,*animal-name*)
+                                         ("os-name"    . ,(substitute #\Space
+                                                                      #\_
+                                                                      os-name))
+                                         ("os-version" . ,os-version)
+                                         ("arch"       . ,arch))))))
 
 (defun build-extension-for-server ()
   "Connect to the *REPO-SERVER* and ask for any extension to build for

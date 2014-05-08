@@ -206,7 +206,7 @@
 (define-command (("build") (fullname))
     "build extension given by FULLNAME"
   (let ((logdir      (merge-pathnames "logs/" *build-root*))
-        (github-uri (format nil "https://~a.git" fullname)))
+        (github-uri  (format nil "https://~a.git" fullname)))
 
     (ensure-directories-exist logdir)
 

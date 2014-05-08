@@ -8,12 +8,19 @@
 
 (in-package #:pginstall.animal)
 
-(defun extension-build-root (extension)
+(defun extension-build-root (extension &key (clean t))
   "Returns the directory where to `git clone` and build an extension."
   (let ((build-root
          (merge-pathnames
           (make-pathname :directory `(:relative ,(full-name extension)))
           *build-root*)))
+
+    (when (and clean (uiop:probe-file* build-root))
+      (format t "rm -rf ~a~%" build-root)
+      (uiop:delete-directory-tree build-root
+                                  :validate t
+                                  :if-does-not-exist :ignore))
+
     (directory-namestring (ensure-directories-exist (namestring build-root)))))
 
 (defun extension-install-prefix (extension vers)
@@ -35,44 +42,23 @@
   (format t "make PGCONFIG=~a DESTDIR=~a install~%" (pg-config pgconfig) prefix)
 
   ;; we copy the environment so that we can scribble on the copy
-  (let* ((environment (environment)))
-    (with-current-directory build-root
-      (setf (environment-variable "CC") (pg-cc pgconfig))
-      (multiple-value-bind (code stdout stderr)
-          (run-program `(,*gmake*
-                         ,(format nil "PGCONFIG=~a" (pg-config pgconfig))
-                         ,(format nil "DESTDIR=~a" prefix)
-                         "install")
-                       :environment environment)
-        (unless (= 0 code)
-          (error "Error during make install: ~a~%" stderr))
-        (format t "~a~%" stdout)
-        stdout))))
+  (let* ((environment `(("CC" . (pg-cc pgconfig))))
+         (gmake       `(,*gmake*
+                        ,(format nil "PGCONFIG=~a" (pg-config pgconfig))
+                        ,(format nil "DESTDIR=~a" prefix)
+                        "install")))
+    (run-command gmake :cwd build-root :log-stream *standard-output*)))
 
 (defun git-clone (extension directory)
   "Fetch the current version of the code for given extension."
   (check-type extension extension)
-  (format t "git clone ~a ~a~%" (short-name extension) directory)
-  (multiple-value-bind (code stdout stderr)
-      (run-program `(,*git*
-                     "clone"
-                     ,(uri extension)
-                     ,directory))
-    (unless (= 0 code)
-      (error "Error during git clone: ~a~%" stderr))
-    (format t "~a~%" stdout)
-    stdout))
+  (let ((git-clone `(,*git* "clone" ,(uri extension) ,directory)))
+    (run-command git-clone :cwd directory :log-stream *standard-output*)))
 
 (defun git-clean-fdx (directory)
   "Cleanup the DIRECTORY before building again an extension."
-  (format t "git clean -fdx ~a~%" directory)
-  (with-current-directory directory
-    (multiple-value-bind (code stdout stderr)
-        (run-program `(,*git* "clean" "-fdx"))
-      (unless (= 0 code)
-        (error "Error during git clean -fdx: ~a~%" stderr))
-      (format t "~a~%" stdout)
-      stdout)))
+  (let ((git-clean `(,*git* "clean" "-fdx")))
+    (run-command git-clean :cwd directory :log-stream *standard-output*)))
 
 
 ;;;
@@ -140,10 +126,10 @@
          (preamble
           (with-output-to-string (*standard-output*)
             ;; git clone the extension sources
-            (format t "rm -rf ~a~%" root)
-            (delete-files root :recursive t)
             (git-clone extension root))))
     (declare (ignore preamble))
 
+    (format t "plop: ~s~%" pgconfig-path-list)
     (loop :for pgconfig-path :in pgconfig-path-list
+       :do (format t "build with ~s~%" pgconfig-path)
        :collect (build-extension-with-pgconfig extension root pgconfig-path))))

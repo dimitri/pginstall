@@ -6,9 +6,7 @@
   (:use #:cl
         #:pginstall.common
         #:pginstall.config
-        #:postmodern
-        #:iolib.os
-        #:iolib.pathnames)
+        #:postmodern)
   (:export #:extension                  ; the extension class
            #:ext-id
            #:short-name

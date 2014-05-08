@@ -35,9 +35,9 @@
                                       (,*pict*        . "/pict")
                                       (,*docroot*     . "/help")
                                       (,*readme-path* . "/readme"))
-       :do (case (iolib.os:file-kind root)
-             (:directory    (load-static-directory fs root url-path))
-             (:regular-file (load-static-file fs root url-path))))
+       :do (if (uiop:directory-pathname-p root)
+               (load-static-directory fs root url-path)
+               (load-static-file fs root url-path)))
     fs)
   "File system as an hash-table in memory.")
 
