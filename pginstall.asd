@@ -79,8 +79,8 @@
 			:components
 			((:file "package")
                          (:file "json"     :depends-on ("package"))
-                         (:file "cache"    :depends-on ("package"))
-                         (:file "paths"    :depends-on ("package" "cache"))
+                         (:file "paths"    :depends-on ("package"))
+                         (:file "cache"    :depends-on ("package" "paths"))
                          (:file "frontend" :depends-on ("package"))
 			 (:file "server"   :depends-on ("package"
                                                         "json"
