@@ -1,16 +1,8 @@
 # pginstall build tool
 APP_NAME   = pginstall
 
-SBCL	   = sbcl
-SBCL_OPTS  = --no-sysinit --no-userinit
-
-COMPRESS_CORE ?= yes
-
-ifeq ($(COMPRESS_CORE),yes)
-COMPRESS_CORE_OPT = --compress-core
-else
-COMPRESS_CORE_OPT = 
-endif
+# use either sbcl or ccl
+CL	   = sbcl
 
 BUILDDIR   = build
 LIBS       = $(BUILDDIR)/libs.stamp
@@ -18,6 +10,33 @@ QLDIR      = $(BUILDDIR)/quicklisp
 MANIFEST   = $(BUILDDIR)/manifest.ql
 BUILDAPP   = $(BUILDDIR)/bin/buildapp
 PGINSTALL  = $(BUILDDIR)/bin/pginstall
+
+BUILDAPP_CCL  = $(BUILDDIR)/bin/buildapp.ccl
+BUILDAPP_SBCL = $(BUILDDIR)/bin/buildapp.sbcl
+
+ifeq ($(CL),sbcl)
+BUILDAPP   = $(BUILDAPP_SBCL)
+CL_OPTS    = --no-sysinit --no-userinit
+else
+BUILDAPP   = $(BUILDAPP_CCL)
+CL_OPTS    = --no-init
+endif
+
+COMPRESS_CORE ?= yes
+
+ifeq ($(CL),sbcl)
+ifeq ($(COMPRESS_CORE),yes)
+COMPRESS_CORE_OPT = --compress-core
+else
+COMPRESS_CORE_OPT = 
+endif
+endif
+
+ifeq ($(CL),sbcl)
+BUILDAPP_OPTS =          --require sb-posix                      \
+                         --require sb-bsd-sockets                \
+                         --require sb-rotate-byte
+endif
 
 all: $(PGINSTALL)
 
@@ -30,14 +49,14 @@ extension:
 $(QLDIR)/setup.lisp:
 	mkdir -p $(BUILDDIR)
 	curl -o $(BUILDDIR)/quicklisp.lisp http://beta.quicklisp.org/quicklisp.lisp
-	$(SBCL) $(SBCL_OPTS) --load $(QLDIR).lisp                                  \
-             --eval '(quicklisp-quickstart:install :path "$(BUILDDIR)/quicklisp")' \
+	$(CL) $(CL_OPTS) --load $(BUILDDIR)/quicklisp.lisp            \
+             --eval '(quicklisp-quickstart:install :path "$(QLDIR)")' \
 	     --eval '(quit)'
 
 quicklisp: $(QLDIR)/setup.lisp ;
 
 $(LIBS): $(QLDIR)/setup.lisp
-	$(SBCL) $(SBCL_OPTS) --load $(QLDIR)/setup.lisp           \
+	$(CL) $(CL_OPTS) --load $(QLDIR)/setup.lisp               \
 	     --eval '(ql:quickload "pginstall")'                  \
 	     --eval '(quit)'
 	touch $@
@@ -45,32 +64,39 @@ $(LIBS): $(QLDIR)/setup.lisp
 libs: $(LIBS) ;
 
 $(MANIFEST): $(LIBS)
-	$(SBCL) $(SBCL_OPTS) --load $(QLDIR)/setup.lisp            \
+	$(CL) $(CL_OPTS) --load $(QLDIR)/setup.lisp                \
 	     --eval '(ql:write-asdf-manifest-file "$(MANIFEST)")'  \
 	     --eval '(quit)'
 
 manifest: $(MANIFEST) ;
 
-$(BUILDAPP): $(QLDIR)/setup.lisp
-	$(SBCL) $(SBCL_OPTS) --load $(QLDIR)/setup.lisp          \
-	     --eval '(ql:quickload "buildapp")'                  \
-	     --eval '(buildapp:build-buildapp "$@")'             \
-	     --eval '(quit)'
+$(BUILDAPP_CCL): $(QLDIR)/setup.lisp
+	mkdir -p $(BUILDDIR)/bin
+	$(CL) $(CL_OPTS) --load $(QLDIR)/setup.lisp               \
+             --eval '(ql:quickload "buildapp")'                   \
+             --eval '(buildapp:build-buildapp "$@")'              \
+             --eval '(quit)'
+
+$(BUILDAPP_SBCL): $(QLDIR)/setup.lisp
+	mkdir -p $(BUILDDIR)/bin
+	$(CL) $(CL_OPTS) --load $(QLDIR)/setup.lisp               \
+             --eval '(ql:quickload "buildapp")'                   \
+             --eval '(buildapp:build-buildapp "$@")'              \
+             --eval '(quit)'
 
 buildapp: $(BUILDAPP) ;
 
 $(PGINSTALL): $(MANIFEST) $(BUILDAPP)
 	mkdir -p $(BUILDDIR)/bin
 	$(BUILDAPP)      --logfile /tmp/build.log                \
-	                 --require sb-posix                      \
-	                 --require sb-bsd-sockets                \
-	                 --require sb-rotate-byte                \
+                         $(BUILDAPP_OPTS)                        \
+                         --sbcl $(CL)                            \
                          --asdf-path .                           \
 	                 --asdf-tree $(QLDIR)/local-projects     \
 	                 --manifest-file $(MANIFEST)             \
 	                 --asdf-tree $(QLDIR)/dists              \
 	                 --asdf-path .                           \
-	                 --load-system pginstall                 \
+	                 --load-system $(APP_NAME)               \
 	                 --entry pginstall:main                  \
 	                 --dynamic-space-size 4096               \
                          $(COMPRESS_CORE_OPT)                    \
