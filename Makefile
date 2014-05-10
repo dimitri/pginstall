@@ -14,24 +14,18 @@ endif
 
 BUILDDIR   = build
 LIBS       = $(BUILDDIR)/libs.stamp
-BUILDAPP   = $(BUILDDIR)/bin/buildapp
-MANIFEST   = $(BUILDDIR)/manifest.ql
-PGINSTALL  = $(BUILDDIR)/bin/pginstall
 QLDIR      = $(BUILDDIR)/quicklisp
+MANIFEST   = $(BUILDDIR)/manifest.ql
+BUILDAPP   = $(BUILDDIR)/bin/buildapp
+PGINSTALL  = $(BUILDDIR)/bin/pginstall
 
 all: $(PGINSTALL)
 
 clean:
-	rm -rf $(BUILDDIR)/*
+	rm -rf $(LIBS) $(QLDIR) $(MANIFEST) $(BUILDAPP) $(PGINSTALL)
 
 extension:
 	$(MAKE) -C src/client
-
-$(QLDIR)/local-projects/iolib:
-	git clone https://github.com/sionescu/iolib.git $@
-
-iolib: $(QLDIR)/local-projects/iolib
-	cd $< && git pull
 
 $(QLDIR)/setup.lisp:
 	mkdir -p $(BUILDDIR)
@@ -42,7 +36,7 @@ $(QLDIR)/setup.lisp:
 
 quicklisp: $(QLDIR)/setup.lisp ;
 
-$(LIBS): quicklisp iolib
+$(LIBS): $(QLDIR)/setup.lisp
 	$(SBCL) $(SBCL_OPTS) --load $(QLDIR)/setup.lisp           \
 	     --eval '(ql:quickload "pginstall")'                  \
 	     --eval '(quit)'
@@ -50,22 +44,22 @@ $(LIBS): quicklisp iolib
 
 libs: $(LIBS) ;
 
-$(MANIFEST): libs
+$(MANIFEST): $(LIBS)
 	$(SBCL) $(SBCL_OPTS) --load $(QLDIR)/setup.lisp            \
 	     --eval '(ql:write-asdf-manifest-file "$(MANIFEST)")'  \
 	     --eval '(quit)'
 
 manifest: $(MANIFEST) ;
 
-$(BUILDAPP): quicklisp
+$(BUILDAPP): $(QLDIR)/setup.lisp
 	$(SBCL) $(SBCL_OPTS) --load $(QLDIR)/setup.lisp          \
 	     --eval '(ql:quickload "buildapp")'                  \
-	     --eval '(buildapp:build-buildapp "$(BUILDAPP)")'    \
+	     --eval '(buildapp:build-buildapp "$@")'             \
 	     --eval '(quit)'
 
 buildapp: $(BUILDAPP) ;
 
-$(PGINSTALL): manifest buildapp
+$(PGINSTALL): $(MANIFEST) $(BUILDAPP)
 	mkdir -p $(BUILDDIR)/bin
 	$(BUILDAPP)      --logfile /tmp/build.log                \
 	                 --require sb-posix                      \

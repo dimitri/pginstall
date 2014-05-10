@@ -20,7 +20,7 @@ You will note in particular:
                             git patch unzip                       \
                             devscripts pandoc                     \
                             postgresql-server-dev-all             \
-                            libarchive-dev libfixposix-dev        \
+                            libarchive-dev                        \
                             libjansson-dev libcurl4-openssl-dev   \
                             libbsd-dev
 
@@ -28,21 +28,10 @@ We need a recent enough [SBCL](http://sbcl.org/) version and that means
 backporting the one found in `sid` rather than using the very old one found
 in current *stable* debian release.
 
-Also, the `libfixposix` software has not been updated in debian for a long
-time, so we grab it from its maintainer own repository, at
-`http://download.opensuse.org/repositories/home:/sionescu/Debian_Wheezy/`.
-
 ### Mac OS X
 
 We suppose you already have `git` and `make` available, if that's not the
 case now is the time to install those tools.
-
-You need to fetch a custom version of `libfixposix` and compile from sources:
-
-    git clone https://github.com/sionescu/libfixposix.git
-    cd libfixposix
-    ./configure
-    make install
 
 Then you need to install about the same set of software dependencies that we
 need, and the process has been tested only with using the `brew` packaging
