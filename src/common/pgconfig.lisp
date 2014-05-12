@@ -10,7 +10,7 @@
   "Run the pg_config utility given at PATH and fetch interesing values."
   (let (ret)
     (multiple-value-bind (code stdout stderr)
-        (run-command `(,path))
+        (run-command `(,path) :capture-output nil)
       (declare (ignore code stderr))
       (with-input-from-string (s stdout)
         (loop for line = (read-line s nil nil)

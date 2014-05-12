@@ -12,12 +12,14 @@
   #+sbcl (sb-posix:getenv name)
   #+ccl  (ccl:getenv name))
 
-(defun (setf environment-variable) (name value)
+(defun (setf environment-variable) (newvalue name)
   "Set the environment variable NAME to VALUE."
-  #+sbcl (sb-posix:setenv name value t)
-  #+ccl  (ccl:setenv name value t))
+  (progn
+    #+sbcl (sb-posix:setenv name newvalue 1)
+    #+ccl  (ccl:setenv name newvalue t)
+    newvalue))
 
-(defun set-environement (environment)
+(defun set-environment (environment)
   "ENVIRONMENT is expected to be an alist of environement variable names and
   values."
   (loop :for (name . value) :in environment
@@ -36,6 +38,7 @@
                       cwd
                       ignore-error-status
                       (log-stream *log-stream*)
+                      (capture-output t)
                       environment)
   "Run specified COMMAND (a list of strings) within CWD."
   (flet ((format-command (stream command)
@@ -49,12 +52,16 @@
     (format-command log-stream command)
 
     (let* ((outs   (make-string-output-stream))
-           (out    (make-broadcast-stream log-stream outs))
+           (out    (if capture-output
+                       (make-broadcast-stream log-stream outs)
+                       (make-broadcast-stream outs)))
            (errors (make-string-output-stream))
-           (err    (make-broadcast-stream log-stream errors)))
+           (err    (if capture-output
+                       (make-broadcast-stream log-stream errors)
+                       (make-broadcast-stream errors))))
       (uiop:with-current-directory (cwd)
         ;; set environment variables
-        (set-environement environment)
+        (set-environment environment)
         (multiple-value-bind (output error code)
             (uiop:run-program (ensure-simple-base-strings command)
                               :output out

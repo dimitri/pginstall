@@ -19,6 +19,6 @@
            #:parse-properties-output
 
            ;; run command
-           #:verbose
+           #:*verbose*
            #:*log-stream*
            #:run-command))

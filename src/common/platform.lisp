@@ -17,7 +17,7 @@
 (defun uname (option)
   "Gets the output of `uname -option`."
   (multiple-value-bind (code stdout stderr)
-      (run-command `("uname" ,option))
+      (run-command `("uname" ,option) :capture-output nil)
     (declare (ignore code stderr))
     (with-input-from-string (s stdout)
       (read-line s))))
@@ -33,7 +33,7 @@
 (defun lsb-release (&optional option)
   "Gets the output of `lsb-release -option`, default to -a."
   (multiple-value-bind (code stdout stderr)
-      (run-command `("lsb_release" ,option))
+      (run-command `("lsb_release" ,option) :capture-output nil)
     (declare (ignore code stderr))
     stdout))
 
@@ -50,7 +50,8 @@
 (defun sw-vers (&optional option)
   "Gets the output of `sw_vers -option`."
   (multiple-value-bind (code stdout stderr)
-      (run-command (if option `("sw_vers" ,option) '("sw_vers")))
+      (run-command (if option `("sw_vers" ,option) '("sw_vers"))
+                   :capture-output nil)
     (declare (ignore code stderr))
     (if option
         ;; read a single line of output

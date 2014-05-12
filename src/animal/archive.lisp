@@ -80,7 +80,6 @@
 (defun gzip (filename)
   "Run the `gzip -9` command on given filename"
   (let ((target (format nil "~a.gz" filename)))
-    (format t "gzip -9 ~a~%" filename)
 
     (when (probe-file target)
       (delete-file target))

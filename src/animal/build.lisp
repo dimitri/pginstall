@@ -16,7 +16,6 @@
           *build-root*)))
 
     (when (and clean (uiop:probe-file* build-root))
-      (format t "rm -rf ~a~%" build-root)
       (uiop:delete-directory-tree build-root
                                   :validate t
                                   :if-does-not-exist :ignore))
@@ -43,27 +42,24 @@
   (check-type extension extension)
   (check-type pgconfig pgconfig)
 
-  (format t "cd ~a~%" build-root)
-  (format t "make PGCONFIG=~a DESTDIR=~a install~%" (pg-config pgconfig) prefix)
-
   ;; we copy the environment so that we can scribble on the copy
-  (let* ((environment `(("CC" . (pg-cc pgconfig))))
+  (let* ((environment `(("CC" . ,(pg-cc pgconfig))))
          (gmake       `(,*gmake*
                         ,(format nil "PGCONFIG=~a" (pg-config pgconfig))
                         ,(format nil "DESTDIR=~a" prefix)
                         "install")))
-    (run-command gmake :cwd build-root :log-stream *standard-output*)))
+    (run-command gmake :cwd build-root :environment environment)))
 
 (defun git-clone (extension directory)
   "Fetch the current version of the code for given extension."
   (check-type extension extension)
   (let ((git-clone `(,*git* "clone" ,(uri extension) ,directory)))
-    (run-command git-clone :cwd directory :log-stream *standard-output*)))
+    (run-command git-clone :cwd directory)))
 
 (defun git-clean-fdx (directory)
   "Cleanup the DIRECTORY before building again an extension."
   (let ((git-clean `(,*git* "clean" "-fdx")))
-    (run-command git-clean :cwd directory :log-stream *standard-output*)))
+    (run-command git-clean :cwd directory)))
 
 
 ;;;
@@ -73,15 +69,18 @@
 ;;; the arguments we get here are all we are going to be able to work with.
 ;;;
 (defun build-extension-with-pgconfig (extension extension-root pgconfig-path
-                                      &key (pg-config-keys
+                                      &key
+                                        (log (make-array '(0)
+                                                         :element-type 'base-char
+                                                         :fill-pointer 0
+                                                         :adjustable t))
+                                        (pg-config-keys
                                             '(:CONFIGURE :CC :VERSION :CFLAGS
                                               :DOCDIR :PKGLIBDIR :SHAREDIR)))
   "Build extension in given EXTENSION-ROOT path with PGCONFIG-PATH."
   (format t "~10tbuilding with ~s~%" pgconfig-path)
-  (let ((archive-filename)
-        (log (make-array '(0) :element-type 'base-char
-                         :fill-pointer 0 :adjustable t)))
-   (with-output-to-string (*standard-output* log)
+  (let ((archive-filename))
+   (with-output-to-string (*log-stream* log)
      (destructuring-bind (&key version
                                configure cc cflags
                                docdir sharedir pkglibdir)
@@ -128,12 +127,17 @@
                                         :full-name extension-full-name
                                         :uri extension-uri))
          (root           (extension-build-root extension))
-         (preamble
-          (with-output-to-string (*standard-output*)
-            ;; git clone the extension sources
-            (git-clone extension root))))
-    (declare (ignore preamble))
+         (log            (make-array '(0)
+                                     :element-type 'base-char
+                                     :fill-pointer 0
+                                     :adjustable t)))
+
+    ;; git clone the extension sources
+    (with-output-to-string (*log-stream* log)
+      (git-clone extension root))
 
     (loop :for pgconfig-path :in pgconfig-path-list
-       :do (format t "build with ~s~%" pgconfig-path)
-       :collect (build-extension-with-pgconfig extension root pgconfig-path))))
+       :collect (build-extension-with-pgconfig extension
+                                               root
+                                               pgconfig-path
+                                               :log log))))
