@@ -20,6 +20,8 @@
         #:pginstall.config
         #:pginstall.repo
         #:postmodern)
+  (:import-from #:alexandria
+                #:read-file-into-string)
   (:export #:discover-animal-setup-and-register-on-server
            #:register-animal-on-server
            #:list-pgconfigs-on-server

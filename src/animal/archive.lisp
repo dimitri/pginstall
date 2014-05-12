@@ -19,7 +19,9 @@
 (defun $libdir-to-module-pathname (source target)
   "Parse given SCRIPT and replace strings \"AS '$libdir/...'\" to \"AS
    'MODULE_PATHNAME/...'\"."
-  (format t "rewrite-libdir ~s ~s~%" source target)
+  (format *log-stream* "rewrite-libdir ~s ~s~%"
+          source
+          (uiop:native-namestring target))
   (let ((content (uiop:read-file-string source)))
     (with-open-file (newscript target
                                :direction :output
@@ -44,11 +46,13 @@
      for target = (make-pathname :directory (directory-namestring directory)
                                  :name (pathname-name file-path)
                                  :type (pathname-type file-path))
-     for source = (namestring file-path)
+     for source = (uiop:native-namestring file-path)
      do (if rewrite-$libdir
             ($libdir-to-module-pathname source target)
             (progn
-              (format t "cp ~s ~s~%" source target)
+              (format *log-stream* "cp ~s ~s~%"
+                      source
+                      (uiop:native-namestring target))
               (uiop:copy-file source target)))
      collect (enough-namestring target base-dir)))
 
@@ -174,7 +178,7 @@
     (let ((*default-pathname-defaults*
            (make-pathname :directory (directory-namestring archive-dir))))
 
-      (format t "tar cf ~s ~{~s~^ ~}~%" archive-filename filelist)
+      (format *log-stream* "tar cf ~s ~{~s~^ ~}~%" archive-filename filelist)
       (archive:with-open-archive (archive archive-filename
                                           :direction :output
                                           :if-exists :supersede)

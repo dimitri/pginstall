@@ -4,7 +4,7 @@
 
 (in-package #:pginstall.common)
 
-(defvar *verbose* t)
+(defvar *verbose* nil)
 (defvar *log-stream* *standard-output*)
 
 (defun environment-variable (name)
