@@ -53,7 +53,8 @@
 (defun pathname-to-url (pathname url-path)
   "Transform given PATHNAME into an URL at which to serve it within URL-PATH."
   (multiple-value-bind (flag path-list last-component file-namestring-p)
-      (uiop:split-unix-namestring-directory-components (namestring pathname))
+      (uiop:split-unix-namestring-directory-components
+       (uiop:native-namestring pathname))
     (declare (ignore flag file-namestring-p))
     (format nil "~a~{/~a~}/~a" url-path path-list last-component)))
 
@@ -65,7 +66,7 @@
          (collector (dir)
            (loop :for pathname :in (uiop:directory-files dir)
               :unless (or (uiop:directory-pathname-p pathname)
-                          (string= "zip "(pathname-type pathname)))
+                          (string= "zip" (pathname-type pathname)))
               :do (let ((url (pathname-to-url
                               (uiop:enough-pathname pathname root) url-path)))
                     (load-static-file fs pathname url)))))
