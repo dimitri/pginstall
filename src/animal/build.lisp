@@ -12,7 +12,7 @@
   "Returns the directory where to `git clone` and build an extension."
   (let ((build-root
          (merge-pathnames
-          (make-pathname :directory `(:relative ,(full-name extension)))
+          (make-pathname :directory `(:relative ,(short-name extension)))
           *build-root*)))
 
     (when (and clean (uiop:probe-file* build-root))
@@ -26,12 +26,17 @@
 (defun extension-install-prefix (extension vers)
   "Returns the directory where to `make install` an EXTENSION for given
    PostgreSQL version VERS.."
-  (let ((install-prefix
-         (merge-pathnames
-          (make-pathname :directory `(:relative ,(short-name extension) ,vers))
-          (merge-pathnames (make-pathname :directory `(:relative "install"))
-                           (make-pathname :directory *build-root*)))))
-    (directory-namestring (ensure-directories-exist install-prefix))))
+  (multiple-value-bind (flag path-list last-component file-namestring-p)
+      (uiop:split-unix-namestring-directory-components
+       (uiop:native-namestring *build-root*))
+    (declare (ignore last-component file-namestring-p))
+
+    (let ((install-prefix
+           (make-pathname :directory `(,flag ,@path-list
+                                             "install"
+                                             ,(short-name extension)
+                                             ,vers))))
+      (directory-namestring (ensure-directories-exist install-prefix)))))
 
 (defun make-install (extension pgconfig build-root prefix)
   "Build the extension in the *build-root* directory."
@@ -129,7 +134,6 @@
             (git-clone extension root))))
     (declare (ignore preamble))
 
-    (format t "plop: ~s~%" pgconfig-path-list)
     (loop :for pgconfig-path :in pgconfig-path-list
        :do (format t "build with ~s~%" pgconfig-path)
        :collect (build-extension-with-pgconfig extension root pgconfig-path))))

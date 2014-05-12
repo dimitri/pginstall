@@ -77,7 +77,8 @@
   (let* ((filename (nth 2
                         (multiple-value-list
                          (uiop:split-unix-namestring-directory-components
-                          (namestring (pathname archive-filename))))))
+                          (uiop:native-namestring
+                           (pathname archive-filename))))))
          (archive                       ; the multi-part POST data
           (list (pathname archive-filename)
                 :content-type "application/octet-stream"

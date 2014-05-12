@@ -14,7 +14,7 @@
 
 (defun (setf environment-variable) (name value)
   "Set the environment variable NAME to VALUE."
-  #+sbcl (sb-posix:setenv name value)
+  #+sbcl (sb-posix:setenv name value t)
   #+ccl  (ccl:setenv name value t))
 
 (defun set-environement (environment)
@@ -22,6 +22,14 @@
   values."
   (loop :for (name . value) :in environment
      :do (setf (environment-variable name) value)))
+
+(defun ensure-simple-base-strings (command)
+  "Return a list of simple-base-strings."
+  (declare (type list command))
+  (mapcar (lambda (s) (typecase s
+                        (simple-base-string s)
+                        (t                  (coerce s 'simple-base-string))))
+          command))
 
 (defun run-command (command
                     &key
@@ -48,7 +56,7 @@
         ;; set environment variables
         (set-environement environment)
         (multiple-value-bind (output error code)
-            (uiop:run-program command
+            (uiop:run-program (ensure-simple-base-strings command)
                               :output out
                               :error-output err
                               :ignore-error-status t)

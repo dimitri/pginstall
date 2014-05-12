@@ -184,5 +184,5 @@
             (archive:write-entry-to-archive archive entry)))))
 
     ;; return the archive filename
-    (gzip (namestring archive-filename))))
+    (gzip (uiop:native-namestring archive-filename))))
 
