@@ -113,7 +113,7 @@
   (format nil "/animal/~a" name))
 
 (defun archive-href (extension-short-name pgversion os version arch)
-  (format nil "/api/fetch/~a/~a/~a/~a/~a"
+  (format nil "/archive/~a--~a--~a--~a--~a.tar.gz"
           extension-short-name
           pgversion
           os

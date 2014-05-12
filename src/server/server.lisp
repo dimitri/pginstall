@@ -48,6 +48,8 @@
        (:GET  "/api/fetch/:extension/:pgversion/:os/:version/:arch"
               'api-fetch-archive)
 
+       (:GET "/archive/:filename" 'serve-archive-filename)
+
        (:POST "/api/add/extension" 'api-add-extension)
 
        ;; Buildfarm animal API
@@ -263,3 +265,11 @@
          (pathname  (archive-pathname extension pgversion os version arch)))
     (when (and pathname (probe-file pathname))
       (hunchentoot:handle-static-file pathname "application/octet-stream"))))
+
+(defun serve-archive-filename (filename)
+  "Return the archive file, another API."
+  (cl-ppcre:register-groups-bind (extension pgversion os version arch)
+      ("^(.*)--(.*)--(.*)--(.*)--(.*).tar.gz" filename)
+    (let ((pathname (archive-pathname extension pgversion os version arch)))
+      (when (and pathname (probe-file pathname))
+        (hunchentoot:handle-static-file pathname "application/octet-stream")))))
