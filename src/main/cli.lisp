@@ -270,9 +270,10 @@
 ;;;
 (define-command (("animal" "register") ())
     "ask the server for a name for the current animal"
-  (discover-animal-setup-and-register-on-server)
-  (format t "Welcome aboard ~a!~%" *animal-name*)
-  (format t "See yourself at ~a~%" (get-animal-uri)))
+  (let ((*log-stream* (make-string-output-stream)))
+    (discover-animal-setup-and-register-on-server)
+    (format t "Welcome aboard ~a!~%" *animal-name*)
+    (format t "See yourself at ~a~%" (get-animal-uri))))
 
 (define-command (("animal" "find" "pgconfig") ())
     "list the pgconfig setups  registered on the server"
