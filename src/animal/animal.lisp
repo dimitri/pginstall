@@ -86,20 +86,26 @@
 
     (cl-ppcre:register-groups-bind (pgversion os-name os-version arch)
         ("^.*--(.*)--(.*)--(.*)--(.*).tar.gz" filename)
-      (drakma:http-request (build-api-uri 'upload 'archive)
-                           :method :post
-                           :form-data t
-                           :content-length t
-                           :parameters `(("archive"    . ,archive)
-                                         ("buildlog"   . ,buildlog)
-                                         ("extension"  . ,extension-full-name)
-                                         ("pgversion"  . ,pgversion)
-                                         ("animal"     . ,*animal-name*)
-                                         ("os-name"    . ,(substitute #\Space
-                                                                      #\_
-                                                                      os-name))
-                                         ("os-version" . ,os-version)
-                                         ("arch"       . ,arch))))))
+      (multiple-value-bind (body status-code headers uri stream must-close reason)
+          (drakma:http-request (build-api-uri 'upload 'archive)
+                               :method :post
+                               :form-data t
+                               :content-length t
+                               :parameters `(("archive"    . ,archive)
+                                             ("buildlog"   . ,buildlog)
+                                             ("extension"  . ,extension-full-name)
+                                             ("pgversion"  . ,pgversion)
+                                             ("animal"     . ,*animal-name*)
+                                             ("os-name"    . ,(substitute #\Space
+                                                                          #\_
+                                                                          os-name))
+                                             ("os-version" . ,os-version)
+                                             ("arch"       . ,arch)))
+        (declare (ignore headers stream must-close))
+        (if (= status-code 200)
+            body
+            (error 'server-error
+                   :uri uri :status status-code :reason reason :body body))))))
 
 (defun build-extension-for-server ()
   "Connect to the *REPO-SERVER* and ask for any extension to build for
