@@ -4,7 +4,10 @@
 (defpackage #:pginstall.common
   (:use #:cl #:esrap)
   (:import-from #:postmodern #:with-connection #:query)
-  (:export #:parse-pgsql-connection-string
+  (:export #:parse-extension-uri
+
+           ;; dburi
+           #:parse-pgsql-connection-string
            #:with-pgsql-connection
            #:validate-dburi
 

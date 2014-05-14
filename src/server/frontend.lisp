@@ -638,18 +638,6 @@
     (set-option-by-name "dburi" dburi)
     (front-list-extensions)))
 
-(defun parse-extension-uri (uri)
-  "Parse given URI as a github http project uri"
-  (let ((uri (puri:parse-uri uri)))
-    (when (string= "github.com" (puri:uri-host uri))
-      (destructuring-bind (abs user repo) (puri:uri-parsed-path uri)
-        (declare (ignore abs))
-        (let ((metadata
-               (github:api-command (format nil "/repos/~a/~a" user repo))))
-          (values (format nil "github.com/~a" (getf metadata :full-name))
-                  (getf metadata :clone-url )
-                  (getf metadata :description)))))))
-
 (defun front-add-extension ()
   "Add an extension to the database"
   (multiple-value-bind (full-name uri description)

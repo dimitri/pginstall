@@ -333,9 +333,14 @@
     "list all known extensions on the server"
   (query-repo-server 'list 'extension))
 
-(define-command (("extension" "add") (name uri desc))
+(define-command (("extension" "add") (uri))
     "add a new extension on the repository server"
-  (post-repo-server 'add 'extension :fullname name :uri uri :description desc))
+  (multiple-value-bind (full-name uri description)
+      (parse-extension-uri uri)
+    (post-repo-server 'add 'extension
+                      :fullname full-name
+                      :uri uri
+                      :description description)))
 
 (define-command (("extension" "queue") (name))
     "queue a build for extension NAME"

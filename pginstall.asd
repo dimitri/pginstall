@@ -36,6 +36,7 @@
 			:components
 			((:file "package")
                          (:file "run-command" :depends-on ("package"))
+                         (:file "github"   :depends-on ("package"))
                          (:file "pgconfig" :depends-on ("package" "run-command"))
                          (:file "platform" :depends-on ("package" "run-command"))
                          (:file "dburi" :depends-on ("package"))
