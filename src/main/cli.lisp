@@ -360,3 +360,26 @@
     "queue a build for extension NAME"
   (query-repo-server 'build name))
 
+(define-command (("fetch") (name pgversion &optional (dir "./")))
+    "fetch NAME extension's archive file from server"
+    (let* ((*log-stream* (make-string-output-stream))
+           (platform     (make-instance 'platform))
+           (filename     (format nil "~a--~a--~a--~a--~a.tar.gz"
+                                 name pgversion
+                                 (os-name platform)
+                                 (os-version platform)
+                                 (arch platform)))
+           (pathname
+            (uiop:merge-pathnames* (substitute #\_ #\Space filename)
+                                   (expand-user-homedir-pathname
+                                    (format nil "~a/" dir)))))
+      (ensure-directories-exist (directory-namestring pathname))
+      (with-open-file (out pathname
+                           :direction :output
+                           :if-exists :supersede
+                           :if-does-not-exist :create
+                           :element-type '(unsigned-byte 8))
+        (write-sequence (query-repo-server 'archive filename) out))
+
+      (format t "~s~%" (uiop:native-namestring pathname))))
+

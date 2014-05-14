@@ -9,6 +9,7 @@
         #:puri)
   (:export #:*config-filename*
            #:set-config-filename
+           #:expand-user-homedir-pathname
 
            ;; repository server
            #:*dburi*

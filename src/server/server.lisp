@@ -49,6 +49,7 @@
               'api-fetch-archive)
 
        (:GET "/archive/:filename" 'serve-archive-filename)
+       (:GET "/api/archive/:filename" 'serve-archive-filename)
 
        (:POST "/api/add/extension" 'api-add-extension)
 
