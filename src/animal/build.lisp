@@ -53,7 +53,7 @@
 (defun git-clone (extension directory)
   "Fetch the current version of the code for given extension."
   (check-type extension extension)
-  (let ((git-clone `(,*git* "clone" ,(uri extension) ,directory)))
+  (let ((git-clone `(,*git* "clone" "--depth" "1" ,(uri extension) ,directory)))
     (run-command git-clone :cwd directory)))
 
 (defun git-clean-fdx (directory)
