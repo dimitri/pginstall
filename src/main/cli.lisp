@@ -4,6 +4,9 @@
 
 (in-package #:pginstall)
 
+(defvar *version-string* "1.0.12"
+  "pginstall version, X.0 is development.")
+
 ;;;
 ;;; First, our very own command line facility.
 ;;;
@@ -20,6 +23,17 @@
     "Return non-nil when a and b are commands with the same verbs"
     (equal (command-verbs a) (command-verbs b))))
 
+(defun destructuring-match (lambda-list args)
+  "Return non-nil when ARGS are matching against the given LAMBDA-LIST."
+  (ignore-errors
+    (funcall
+     (compile nil
+              `(lambda ()
+                 ;; hide a style warning that variables are defined
+                 ;; but never used here
+                 (declare #+sbcl (sb-ext:muffle-conditions style-warning))
+                 (destructuring-bind ,lambda-list ',args t))))))
+
 (defmethod command-matches ((command command) args)
   "When the given COMMAND matches given command line ARGS, then return it
    and the argument to apply to it."
@@ -32,7 +46,7 @@
                         :finally (return matches-p))))
       (when matches-p
         (let ((fun-args (nthcdr (length (command-verbs command)) args)))
-          (when (= (length (command-bindings command)) (length fun-args))
+          (when (destructuring-match (command-bindings command) fun-args)
             (list (command-lambda command) fun-args)))))))
 
 (defmacro define-command ((verbs bindings) help-string &body body)
@@ -62,21 +76,47 @@
             (setf (aref *commands* ,position) ,command)
             (vector-push-extend ,command *commands*))))))
 
-(defun find-command-function (argv)
-  "Loop through *COMMANDS* to find the code to execute given ARGV."
-  (let ((args (rest argv)))
-    (loop :for command :across *commands*
-       :for match := (command-matches command args)
-       :until match
-       :finally (return match))))
+(defvar *options* '((:verbose "-v" "--verbose")
+                    (:debug   "-d" "--debug")
+                    (:help    "-h" "--help")
+                    (:version "-V" "--version"))
+  "Alist of allowed options for the main pginstall command line.")
 
-(defun usage (args)
+(defun parse-option-name (arg)
+  "When ARG is an option name, return its keyword, otherwise return nil."
+  (loop :for (opt-keyword short-opt long-opt) :in *options*
+     :when (or (string= arg short-opt) (string= arg long-opt))
+     :return opt-keyword))
+
+(defun process-argv-options (argv)
+  "Return the real args found in argv, and a list of the options used, as
+  multiple values."
+  (let ((args (rest argv))
+        (opts '()))
+    (values (loop :for arg :in args
+               :for opt := (parse-option-name arg)
+               :when opt
+               :do (push opt opts)
+               :else :collect arg)
+            opts)))
+
+(defun find-command-function (args)
+  "Loop through *COMMANDS* to find the code to execute given ARGS."
+  (loop :for command :across *commands*
+     :for match := (command-matches command args)
+     :until match
+     :finally (return match)))
+
+(defun usage (args &key help)
   "Loop over all the commands and output the usage of the main program"
-  (format t "~a: command line parse error.~%" (first args) )
-  (format t "~@[Error parsing args: ~{~s~^ ~}~%~]~%" (rest args))
+  (format t "pginstall [--help --version] command ...~%")
+  (unless help
+    (format t "~a: command line parse error.~%" (first args))
+    (format t "~@[Error parsing args: ~{~s~^ ~}~%~]~%" (rest args)))
+  (format t "~%Available commands:~%")
   (loop :for command :across *commands*
      :do (with-slots (verbs bindings help) command
-           (format t "~{~a~^ ~} ~{~a~^ ~}~28T~a~%" verbs bindings help))))
+           (format t " ~{~a~^ ~} ~{~a~^ ~}~28T~a~%" verbs bindings help))))
 
 ;;;
 ;;; Who doesn't like the advanced and detailed error reporting offered by
@@ -89,36 +129,63 @@
 
 (defun main (argv)
   "The main entry point for the command-line interface."
-  (let ((match (find-command-function argv)))
-    (if match
-        (destructuring-bind (fun args) match
-          (handler-case
-              (handler-bind ((warning
-                              #'(lambda (c)
-                                  (format t "WARNING: ~a~%" c)
-                                  (muffle-warning))))
-                (apply fun args))
-            (cli-error (e)
-              (format t
-                      "ERROR: ~a~%~@[DETAIL: ~a~%~]~@[HINT: ~a~%~]"
-                      (cli-error-message e)
-                      (cli-error-detail e)
-                      (cli-error-hint e)))
-            (server-error (e)
-              (format t
-                      "ERROR ~d ON ~a~%~@[REASON: ~a~%~]~@[BODY: ~a~%~]"
-                      (server-error-status-code e)
-                      (server-error-uri e)
-                      (server-error-reason e)
-                      (server-error-body e)))
-            (condition (c)
-              (format t "ERROR: ~a~%" c))))
-        (usage argv))))
+  (multiple-value-bind (args opts)
+      (process-argv-options argv)
+
+    (when (member :help opts)
+      (usage args :help t)
+      (uiop:quit 0))
+
+    (when (member :version opts)
+      (format t "pginstall version ~s~%" *version-string*)
+      (format t "compiled with ~a ~a~%"
+                  (lisp-implementation-type)
+                  (lisp-implementation-version))
+      (uiop:quit 0))
+
+    ;; don't do anything when --help or --version were given
+    (let ((match (find-command-function args)))
+      (if match
+          (destructuring-bind (fun args) match
+            (handler-case
+                (handler-bind ((warning
+                                #'(lambda (c)
+                                    (format t "WARNING: ~a~%" c)
+                                    (muffle-warning))))
+                  (apply fun args))
+              (cli-error (e)
+                (format t
+                        "ERROR: ~a~%~@[DETAIL: ~a~%~]~@[HINT: ~a~%~]"
+                        (cli-error-message e)
+                        (cli-error-detail e)
+                        (cli-error-hint e)))
+              (server-error (e)
+                (format t
+                        "ERROR ~d ON ~a~%~@[REASON: ~a~%~]~@[BODY: ~a~%~]"
+                        (server-error-status-code e)
+                        (server-error-uri e)
+                        (server-error-reason e)
+                        (server-error-body e)))
+              (condition (c)
+                (format t "ERROR: ~a~%" c))))
+          (usage argv)))))
 
 
 ;;;
 ;;; And now the commands, starting with the setup
 ;;;
+(define-command (("config") (&optional name value))
+    "display current configuration values"
+  (cond ((and name (string= name "get")) ; command routing error
+         (usage))
+        ((and name (null value))
+         (get-option-by-name name))
+        ((and name value)
+         (set-option-by-name name value))
+        (t
+         (format t "# Reading configuration from ~s~%~%" *config-filename*)
+         (format t "~a~%" (read-file-into-string *config-filename*)))))
+
 (define-command (("config" "set") (name value))
     "set config variable NAME to VALUE"
   (set-option-by-name name value))

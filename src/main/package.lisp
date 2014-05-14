@@ -10,6 +10,10 @@
         #:pginstall.repo
         #:pginstall.server)
 
+  (:import-from #:alexandria
+                #:read-file-into-string
+                #:read-file-into-byte-vector)
+
   (:export #:*listen-port*
            #:*repo-logfile*
            #:*http-logfile*
