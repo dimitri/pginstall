@@ -8,6 +8,7 @@
         #:py-configparser
         #:puri)
   (:export #:*config-filename*
+           #:set-config-filename
 
            ;; repository server
            #:*dburi*

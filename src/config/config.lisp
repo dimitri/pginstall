@@ -52,6 +52,10 @@
         (t
          (uiop:parse-unix-namestring namestring))))
 
+(defun set-config-filename (namestring)
+  "Parse and expand NAMESTRING and set the result value to *CONFIG-FILENAME*."
+  (setf *config-filename* (expand-user-homedir-pathname namestring)))
+
 
 ;;;
 ;;; Defaults, organized in sections, with proper use facing option names

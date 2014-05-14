@@ -76,28 +76,55 @@
             (setf (aref *commands* ,position) ,command)
             (vector-push-extend ,command *commands*))))))
 
-(defvar *options* '((:verbose "-v" "--verbose")
-                    (:debug   "-d" "--debug")
-                    (:help    "-h" "--help")
-                    (:version "-V" "--version"))
-  "Alist of allowed options for the main pginstall command line.")
+(defstruct (option
+             (:conc-name opt-)
+             (:constructor make-option (keyword short long
+                                                &optional fun eat-next-arg)))
+  keyword short long fun eat-next-arg)
+
+(defvar *options*
+  (list (make-option :verbose "-v" "--verbose")
+        (make-option :debug   "-d" "--debug")
+        (make-option :help    "-h" "--help")
+        (make-option :version "-V" "--version")
+        (make-option :config "-c" "--config" #'set-config-filename t))
+  "List of allowed options for the main pginstall command line.")
 
 (defun parse-option-name (arg)
   "When ARG is an option name, return its keyword, otherwise return nil."
-  (loop :for (opt-keyword short-opt long-opt) :in *options*
-     :when (or (string= arg short-opt) (string= arg long-opt))
-     :return opt-keyword))
+  (loop :for option :in *options*
+     :when (or (string= arg (opt-short option))
+               (string= arg (opt-long option)))
+     :return option))
 
 (defun process-argv-options (argv)
   "Return the real args found in argv, and a list of the options used, as
   multiple values."
-  (let ((args (rest argv))
-        (opts '()))
-    (values (loop :for arg :in args
-               :for opt := (parse-option-name arg)
-               :when opt
-               :do (push opt opts)
-               :else :collect arg)
+  (let ((args   '())
+        (ignore nil)
+        (opts   '()))
+    (values (loop :for (arg next) :on (rest argv)
+               :for opt := (unless ignore (parse-option-name arg))
+               :do (progn
+                     ;; sanity check
+                     (when (and opt (opt-eat-next-arg opt) (null next))
+                       (format t "Missing argument for option ~a~%" arg)
+                       (push :help opts))
+
+                     ;; build the argument list
+                     (unless (or opt ignore)
+                       (push arg args))
+
+                     ;; we might have to ignore arg on next iterationa
+                     (setf ignore (and opt (opt-eat-next-arg opt)))
+
+                     ;; deal with the option side effects
+                     (when opt
+                       (push (opt-keyword opt) opts)
+                       (when (opt-fun opt)
+                         (let ((args (when (opt-eat-next-arg opt) (list next))))
+                           (apply (opt-fun opt) args)))))
+               :finally (return (nreverse args)))
             opts)))
 
 (defun find-command-function (args)
@@ -109,7 +136,7 @@
 
 (defun usage (args &key help)
   "Loop over all the commands and output the usage of the main program"
-  (format t "pginstall [--help --version] command ...~%")
+  (format t "pginstall [ --help --version ] [ --config filename ] command ...~%")
   (unless help
     (format t "~a: command line parse error.~%" (first args))
     (format t "~@[Error parsing args: ~{~s~^ ~}~%~]~%" (rest args)))
@@ -177,7 +204,7 @@
 (define-command (("config") (&optional name value))
     "display current configuration values"
   (cond ((and name (string= name "get")) ; command routing error
-         (usage))
+         (usage (list "config" name)))
         ((and name (null value))
          (get-option-by-name name))
         ((and name value)
