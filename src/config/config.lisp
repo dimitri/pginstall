@@ -36,6 +36,24 @@
 
 
 ;;;
+;;; Parse ~ when found first in a nametring
+;;;
+(defun expand-user-homedir-pathname (namestring)
+  "Expand NAMESTRING replacing leading ~ with (user-homedir-pathname)"
+  (cond ((or (string= "~" namestring) (string= "~/" namestring))
+         (user-homedir-pathname))
+
+        ((and (<= 2 (length namestring))
+              (char= #\~ (aref namestring 0))
+              (char= #\/ (aref namestring 1)))
+         (uiop:merge-pathnames* (uiop:parse-unix-namestring (subseq namestring 2))
+                                (user-homedir-pathname)))
+
+        (t
+         (uiop:parse-unix-namestring namestring))))
+
+
+;;;
 ;;; Defaults, organized in sections, with proper use facing option names
 ;;;
 (defvar *sections-variables*
@@ -82,9 +100,10 @@
     (write-stream config stream)
     config))
 
-(defun save-config (&optional (filename (file-path *config-filename*)))
+(defun save-config (&optional (pathname
+                               (expand-user-homedir-pathname *config-filename*)))
   "Save the current configuration of pginstall in FILENAME."
-  (with-open-file (s (file-path-namestring filename)
+  (with-open-file (s pathname
                      :direction :output
                      :if-exists :supersede
                      :if-does-not-exist :create
