@@ -16,7 +16,7 @@ as $$
          join pginstall.platform p on p.id = a.platform
 
    where     a.pgversion = $2
-         and e.fullname = $1
+         and e.shortname = $1
          and p.os_name = $3
          and p.os_version = $4
          and p.arch = $5
