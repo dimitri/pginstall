@@ -297,28 +297,32 @@
     "build all extension queued for our platform"
   (loop :while (build-extension-for-server)))
 
-(define-command (("build") (fullname))
+(define-command (("build") (uri))
     "build extension given by FULLNAME"
-  (let ((logdir      (merge-pathnames "logs/" *build-root*))
-        (github-uri  (format nil "https://~a.git" fullname)))
+  (let ((logdir      (merge-pathnames "logs/" *build-root*)))
 
-    (ensure-directories-exist logdir)
+    (multiple-value-bind (fullname uri description)
+        (parse-extension-uri uri)
 
-    (loop :for (filename . log) :in (build-extension fullname github-uri)
-       :for logfile := (merge-pathnames
-                        (make-pathname :name (extension-short-name fullname)
-                                       :type "txt")
-                        logdir)
-       :do (with-open-file (s logfile
-                              :direction :output
-                              :if-does-not-exist :create
-                              :if-exists :supersede)
-             (write-sequence log s))
-       :do (format t "~%Built: ~a ~% logs: ~a~%" filename logfile))))
+      (declare (ignore description))
+      (ensure-directories-exist logdir)
+
+      (loop :for (filename . log) :in (build-extension fullname uri)
+         :for logfile := (merge-pathnames
+                          (make-pathname :name (extension-short-name fullname)
+                                         :type "txt")
+                          logdir)
+         :do (with-open-file (s logfile
+                                :direction :output
+                                :if-does-not-exist :create
+                                :if-exists :supersede)
+               (write-sequence log s))
+         :do (format t "~%Built: ~a ~% logs: ~a~%" filename logfile)))))
 
 (define-command (("whoami") ())
     "display information about this local animal"
-  (let ((platform (make-instance 'platform)))
+  (let* ((*log-stream* (make-string-output-stream))
+         (platform     (make-instance 'platform)))
     (format t "Animal Name: ~a~%" *animal-name*)
     (format t "        URI: ~a~%" (get-animal-uri))
     (format t "         OS: ~a~%" (os-name platform))
