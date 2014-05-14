@@ -105,18 +105,14 @@
   "Connect to the *REPO-SERVER* and ask for any extension to build for
    registered *ANIMAL-NAME*."
   (let ((extension-hash (get-extension-to-build)))
-    (if extension-hash
-        (let* ((extension-full-name (gethash "FULLNAME" extension-hash))
-               (extension-uri       (gethash "URI" extension-hash))
-               (archives
-                (build-extension extension-full-name extension-uri)))
-          (loop :for (archive-filename . log) :in archives
-             :for archive := (parse-archive
-                              (upload-archive extension-full-name
-                                              archive-filename
-                                              log))
-             :do (format t "Built file: ~s~%" archive-filename)
-             :collect archive))
-
-        ;; nothing in the queue
-        (format t "No extension to build for me.~%"))))
+    (when extension-hash
+      (let* ((extension-full-name (gethash "FULLNAME" extension-hash))
+             (extension-uri       (gethash "URI" extension-hash))
+             (archives
+              (build-extension extension-full-name extension-uri)))
+        (loop :for (archive-filename . log) :in archives
+           :for archive := (parse-archive
+                            (upload-archive extension-full-name
+                                            archive-filename
+                                            log))
+           :collect archive)))))

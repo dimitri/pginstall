@@ -295,7 +295,12 @@
 
 (define-command (("animal" "build") ())
     "build all extension queued for our platform"
-  (loop :while (build-extension-for-server)))
+  (loop :for got-one := nil :then t
+     :for archive-list := (build-extension-for-server)
+     :while archive-list
+     :do (loop :for archive :in archive-list
+            :do (format t "Built: ~a~%~%" (archive-filename archive)))
+     :finally (format t "No~@[ more~] extension to build for me.~%" got-one)))
 
 (define-command (("build") (uri))
     "build extension given by FULLNAME"
