@@ -67,6 +67,7 @@
            #:archive-platform-id
            #:archive-pgversion
            #:archive-filename
+           #:archive-log
 
            ;; the Main API
            #:select-star
