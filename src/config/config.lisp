@@ -31,6 +31,9 @@
 (defparameter *repo-server* "http://localhost:8042/"
   "HTTP URI of the repository server this animal should register against.")
 
+(defparameter *upstream-server* nil
+  "HTTP URI of the repository upstream server for this server.")
+
 (defparameter *animal-name* nil
   "Name of the animal that runs on this local instance.")
 
@@ -62,11 +65,12 @@
 ;;;
 (defvar *sections-variables*
   '(("server"
-     ("dburi"        *dburi*        validate-dburi)
-     ("listen-port"  *listen-port*  parse-integer)
-     ("repo-logfile" *repo-logfile* check-file-path)
-     ("http-logfile" *http-logfile* check-file-path)
-     ("archive-path" *archive-path* check-and-make-directory))
+     ("dburi"        *dburi*           validate-dburi)
+     ("listen-port"  *listen-port*     parse-integer)
+     ("repo-logfile" *repo-logfile*    check-file-path)
+     ("http-logfile" *http-logfile*    check-file-path)
+     ("archive-path" *archive-path*    check-and-make-directory)
+     ("upstream"     *upstream-server* check-uri))
     ("animal"
      ("name"         *animal-name*  identity)
      ("build-root"   *build-root*   check-and-make-directory)

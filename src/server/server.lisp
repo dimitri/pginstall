@@ -41,17 +41,14 @@
        (:GET  "/api/terminate/yourself" 'api-server-stop)
 
        ;; Extension API
+       (:POST "/api/add/extension" 'api-add-extension)
        (:GET  "/api/list/extension" 'api-list-extension)
        (:GET  "/api/list/extension/:os/:version/:arch"
               'api-list-available-extensions)
 
-       (:GET  "/api/fetch/:extension/:pgversion/:os/:version/:arch"
-              'api-fetch-archive)
-
+       ;; Fetch an archive file
        (:GET "/archive/:filename" 'serve-archive-filename)
        (:GET "/api/archive/:filename" 'serve-archive-filename)
-
-       (:POST "/api/add/extension" 'api-add-extension)
 
        ;; Buildfarm animal API
        (:GET  "/api/list/platform"         'api-list-platform)
@@ -256,21 +253,20 @@
 (define-api-function api-list-available-extensions (os version arch)
   (select-extensions-available-on-platform os version arch))
 
-(defun api-fetch-archive (extension pgversion os version arch)
-  "Return the archive file."
-  (let* ((extension extension)
-         (pgversion pgversion)
-         (os        os)
-         (version   version)
-         (arch      arch)
-         (pathname  (archive-pathname extension pgversion os version arch)))
-    (when (and pathname (probe-file pathname))
-      (hunchentoot:handle-static-file pathname "application/octet-stream"))))
-
 (defun serve-archive-filename (filename)
   "Return the archive file, another API."
   (cl-ppcre:register-groups-bind (extension pgversion os version arch)
       ("^(.*)--(.*)--(.*)--(.*)--(.*).tar.gz" filename)
     (let ((pathname (archive-pathname extension pgversion os version arch)))
-      (when (and pathname (probe-file pathname))
-        (hunchentoot:handle-static-file pathname "application/octet-stream")))))
+      (if (and pathname (probe-file pathname))
+          ;; we have a local file
+          (hunchentoot:handle-static-file pathname "application/octet-stream")
+
+          (when *upstream-server*
+            (multiple-value-bind (archive-bytes status-code)
+                (fetch-archive-from-upstream (substitute #\_ #\Space filename))
+              (when (= hunchentoot:+http-ok+ status-code)
+                (setf (hunchentoot:content-type*) "application/octet-stream")
+                (let ((out (hunchentoot:send-headers)))
+                  (write-sequence archive-bytes out)))))))))
+

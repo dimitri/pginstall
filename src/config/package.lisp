@@ -17,6 +17,7 @@
            #:*archive-path*
            #:*repo-logfile*
            #:*http-logfile*
+           #:*upstream-server*
 
            ;; build animal
            #:*repo-server*
@@ -24,7 +25,6 @@
            #:*git*
            #:*gmake*
            #:*build-root*
-           #:*repo-server*
 
            #:read-config
            #:save-config

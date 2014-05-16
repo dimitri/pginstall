@@ -42,12 +42,21 @@ The Extension API allows to control stuff for extensions.
         clone` command;
       - `description`, a description field.
 
-### `GET /api/fetch/:extension/:pgversion/:os/:version/:arch`
+### `GET /archive/:filename`
+### `GET /api/archive/:filename`
 
   - Returns the extension's Archive Binary File for given PostgreSQL major
     version and platform, if such a file exists.
+
+  - The filename is expected to match the following regular expression,
+    where the group matches to, in order, the extension's short name, the
+    PostgreSQL server version, the Operating System name, the Operating
+    System version and the architecture:
     
-  - A `404` HTTP error is returned when the file does not exists.
+        ^(.*)--(.*)--(.*)--(.*)--(.*).tar.gz
+
+  - A `404` HTTP error is returned when the file does not exists, or when
+    its filename doesn't match given API.
 
 ### `GET /api/list/extension`
 
