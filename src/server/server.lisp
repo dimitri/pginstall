@@ -83,7 +83,7 @@
   (read-config)
 
   (setf *acceptor* (make-instance 'simpleroutes-acceptor
-                                  :routes *routes*
+                                  :routes '*routes*
                                   :port *listen-port*
                                   :document-root *archive-path*
                                   :access-log-destination access-log
