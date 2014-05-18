@@ -11,8 +11,8 @@
 
 (in-package #:pginstall.server)
 
-(setf *routeslist*
-      (compile-routes
+(defvar *routes*
+  (compile-routes
        ;; User website
        (:GET  "/"          'home)
        (:GET  "/config"    'config)
@@ -83,6 +83,7 @@
   (read-config)
 
   (setf *acceptor* (make-instance 'simpleroutes-acceptor
+                                  :routes *routes*
                                   :port *listen-port*
                                   :document-root *archive-path*
                                   :access-log-destination access-log
