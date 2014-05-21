@@ -194,7 +194,9 @@
                         (server-error-reason e)
                         (server-error-body e)))
               (condition (c)
-                (format t "ERROR: ~a~%" c))))
+                (if (member :debug opts)
+                    (invoke-debugger c)
+                    (format t "ERROR: ~a~%" c)))))
           (usage argv)))))
 
 
