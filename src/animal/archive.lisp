@@ -81,17 +81,20 @@
 ;;;
 ;;; Of course we want a compressed tarball.
 ;;;
-(defun gzip (filename)
-  "Run the `gzip -9` command on given filename"
-  (let ((target (format nil "~a.gz" filename)))
+(defun tar (source-archive-directory filename)
+  "Run the `tar xzf` command on given LOCATION and output given FILENAME."
+  (when (probe-file filename)
+    (delete-file filename))
 
-    (when (probe-file target)
-      (delete-file target))
+  (run-command `("tar" "czf"
+                       ,(uiop:native-namestring filename)
+                       "--options"
+                       "compression-level=9"
+                       ".")
+               :cwd (uiop:native-namestring source-archive-directory))
 
-    (run-command `("gzip" "-9" ,filename) :cwd (directory-namestring filename))
-
-    ;; return the new filename
-    target))
+  ;; return the filename
+  filename)
 
 
 ;;;
@@ -158,11 +161,7 @@
   (declare (type extension extension))
   (let* ((archive-basename (format nil "~a--~a" (short-name extension) version))
          (archive-dir      (make-archive-dir extension archive-basename))
-         (filelist         (prepare-archive-files extension
-                                                  archive-dir
-                                                  docdir
-                                                  pkglibdir
-                                                  sharedir))
+         (filelist         )
          (platform         (make-instance 'platform))
          (archive-name     (format nil "~a--~a--~a--~a--~a"
                                    (short-name extension)
@@ -171,21 +170,13 @@
                                    (os-version platform)
                                    (arch platform)))
          (archive-filename (merge-pathnames (make-pathname :name archive-name
-                                                           :type "tar")
+                                                           :type "tar.gz")
                                             *build-root*)))
 
-    ;; build the archive, it's all ready
-    (let ((*default-pathname-defaults*
+    ;; prepare then build the archive
+    (prepare-archive-files extension archive-dir docdir pkglibdir sharedir)
+
+    (let ((archive-source-directory
            (make-pathname :directory (directory-namestring archive-dir))))
-
-      (format *log-stream* "tar cf ~s ~{~s~^ ~}~%" archive-filename filelist)
-      (archive:with-open-archive (archive archive-filename
-                                          :direction :output
-                                          :if-exists :supersede)
-        (dolist (file filelist (archive:finalize-archive archive))
-          (let ((entry (archive:create-entry-from-pathname archive file)))
-            (archive:write-entry-to-archive archive entry)))))
-
-    ;; return the archive filename
-    (gzip (uiop:native-namestring archive-filename))))
+      (tar archive-source-directory archive-filename))))
 

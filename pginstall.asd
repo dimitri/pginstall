@@ -15,7 +15,6 @@
                  #:puri                 ; URI validation and manipulation
                  #:cl-ppcre             ; Regular Expressions
                  #:alexandria           ; Some utilities
-                 #:archive              ; produce an extension archive file
                  #:split-sequence       ; split sequences
                  #:hunchentoot          ; http server
                  #:yason                ; JSON routines
