@@ -334,15 +334,17 @@ list_available_extensions_on_repository(Platform platform)
 void
 download_archive(const char *filename, const char *extname, Platform platform)
 {
+    char *archive_filename = psprintf("%s--%s--%s--%s--%s.tar.gz",
+                                      extname,
+                                      PG_VERSION,
+                                      platform->os_name,
+                                      platform->os_version,
+                                      platform->arch);
+
     bool ok = download(filename,
                        pginstall_repository,
-                       6,
-                       "fetch",
-                       extname,
-                       PG_VERSION,
-                       platform->os_name,
-                       platform->os_version,
-                       platform->arch);
+                       2,
+                       "archive", archive_filename);
 
     if (!ok)
     {
@@ -354,13 +356,8 @@ download_archive(const char *filename, const char *extname, Platform platform)
                 (errcode(ERRCODE_NO_DATA_FOUND),
                  errmsg("extension \"%s\" is not available on pginstall repository server",
                         extname),
-                 errdetail("HTTP 404 on %sapi/fetch/%s/%s/%s/%s/%s",
-                           pginstall_repository,
-                           extname,
-                           PG_VERSION,
-                           platform->os_name,
-                           platform->os_version,
-                           platform->arch)));
+                 errdetail("HTTP 404 on %sapi/archive/%s",
+                           pginstall_repository, archive_filename)));
     }
     return;
 }
