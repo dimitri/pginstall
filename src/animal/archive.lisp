@@ -94,7 +94,7 @@
                :cwd (uiop:native-namestring source-archive-directory))
 
   ;; return the filename
-  filename)
+  (uiop:native-namestring filename))
 
 
 ;;;
@@ -161,7 +161,6 @@
   (declare (type extension extension))
   (let* ((archive-basename (format nil "~a--~a" (short-name extension) version))
          (archive-dir      (make-archive-dir extension archive-basename))
-         (filelist         )
          (platform         (make-instance 'platform))
          (archive-name     (format nil "~a--~a--~a--~a--~a"
                                    (short-name extension)
@@ -169,9 +168,9 @@
                                    (substitute #\_ #\Space (os-name platform))
                                    (os-version platform)
                                    (arch platform)))
-         (archive-filename (merge-pathnames (make-pathname :name archive-name
-                                                           :type "tar.gz")
-                                            *build-root*)))
+         (archive-filename (make-pathname :directory (namestring *build-root*)
+                                          :name archive-name
+                                          :type "tar.gz")))
 
     ;; prepare then build the archive
     (prepare-archive-files extension archive-dir docdir pkglibdir sharedir)

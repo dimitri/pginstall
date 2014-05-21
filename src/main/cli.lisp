@@ -305,7 +305,7 @@
 
 (define-command (("build") (uri))
     "build extension given by FULLNAME"
-  (let ((logdir      (merge-pathnames "logs/" *build-root*)))
+  (let ((logdir      (namestring (merge-pathnames "logs/" *build-root*))))
 
     (multiple-value-bind (fullname uri description)
         (parse-extension-uri uri)
@@ -314,10 +314,9 @@
       (ensure-directories-exist logdir)
 
       (loop :for (filename . log) :in (build-extension fullname uri)
-         :for logfile := (merge-pathnames
-                          (make-pathname :name (extension-short-name fullname)
-                                         :type "txt")
-                          logdir)
+         :for logfile := (make-pathname :directory logdir
+                                        :name (extension-short-name fullname)
+                                        :type "txt")
          :do (with-open-file (s logfile
                                 :direction :output
                                 :if-does-not-exist :create
