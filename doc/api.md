@@ -43,6 +43,7 @@ The Extension API allows to control stuff for extensions.
       - `description`, a description field.
 
 ### `GET /archive/:filename`
+
 ### `GET /api/archive/:filename`
 
   - Returns the extension's Archive Binary File for given PostgreSQL major
