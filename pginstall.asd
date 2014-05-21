@@ -83,9 +83,11 @@
                          (:file "paths"    :depends-on ("package"))
                          (:file "cache"    :depends-on ("package" "paths"))
                          (:file "frontend" :depends-on ("package"))
+                         (:file "upstream" :depends-on ("package"))
 			 (:file "server"   :depends-on ("package"
                                                         "json"
-                                                        "frontend"))))
+                                                        "frontend"
+                                                        "upstream"))))
 
                (:module main
                         :depends-on ("common" "config" "repo" "animal" "server")
