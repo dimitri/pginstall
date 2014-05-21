@@ -4,6 +4,16 @@ APP_NAME   = pginstall
 # use either sbcl or ccl
 CL	   = sbcl
 
+LISP_SRC   = $(wildcard src/animal/*lisp) \
+             $(wildcard src/common/*lisp) \
+             $(wildcard src/config/*lisp) \
+             $(wildcard src/main/*lisp) \
+             $(wildcard src/repo/*lisp) \
+             $(wildcard src/server/*lisp) \
+             pginstall.asd
+
+DOCS       = $(wildcard doc/*md) README.md
+
 BUILDDIR   = build
 LIBS       = $(BUILDDIR)/libs.stamp
 QLDIR      = $(BUILDDIR)/quicklisp
@@ -86,7 +96,7 @@ $(BUILDAPP_SBCL): $(QLDIR)/setup.lisp
 
 buildapp: $(BUILDAPP) ;
 
-$(PGINSTALL): $(MANIFEST) $(BUILDAPP)
+$(PGINSTALL): $(MANIFEST) $(BUILDAPP) $(LISP_SRC) $(DOCS)
 	mkdir -p $(BUILDDIR)/bin
 	$(BUILDAPP)      --logfile /tmp/build.log                \
                          $(BUILDAPP_OPTS)                        \
