@@ -26,6 +26,11 @@
            #:*gmake*
            #:*build-root*
 
+           ;; S3
+           #:*s3-bucket*
+           #:*s3-access-key*
+           #:*s3-secret-key*
+
            #:read-config
            #:save-config
            #:write-current-config

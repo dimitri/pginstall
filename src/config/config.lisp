@@ -37,6 +37,12 @@
 (defparameter *animal-name* nil
   "Name of the animal that runs on this local instance.")
 
+(defparameter *s3-bucket* nil
+  "Name of the Amzon AWS S3 bucket to use when using S3.")
+
+(defparameter *s3-access-key* nil "S3 credentials.")
+(defparameter *s3-secret-key* nil "S3 credentials.")
+
 
 ;;;
 ;;; Parse ~ when found first in a nametring
@@ -71,6 +77,10 @@
      ("http-logfile" *http-logfile*    check-file-path)
      ("archive-path" *archive-path*    check-and-make-directory)
      ("upstream"     *upstream-server* check-uri))
+    ("s3"
+     ("bucket"       *s3-bucket*     identity)
+     ("access_key"   *s3-access-key* identity)
+     ("secret_key"   *s3-secret-key* identity))
     ("animal"
      ("name"         *animal-name*  identity)
      ("build-root"   *build-root*   check-and-make-directory)

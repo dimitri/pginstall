@@ -244,9 +244,14 @@
       (declare (ignore archive-mime-type))
       (with-output-to-string (*standard-output*)
         (yason:encode
-         (receive-archive extension pgversion
-                          animal-name os-name os-version arch
-                          buildlog archive-filename archive))))))
+         (prog1
+             (receive-archive extension pgversion
+                              animal-name os-name os-version arch
+                              buildlog archive-filename archive)
+
+           ;; we might have to upload the archive to S3 now
+           (when *s3-bucket*
+            (upload-archive-to-s3 archive-filename))))))))
 
 ;;;
 ;;; API entries for the PostgreSQL embedded client

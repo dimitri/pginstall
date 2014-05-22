@@ -23,6 +23,7 @@
                  #:cl-who               ; HTML production from lisp code
                  #:cl-markdown          ; HTML production from Markdown docs
                  #:cl-github-v3         ; GitHub API
+                 #:zs3                  ; Amazon S3 REST API in Common Lisp
 		 )
     :components
     ((:module "lib"
@@ -82,11 +83,13 @@
                          (:file "paths"    :depends-on ("package"))
                          (:file "cache"    :depends-on ("package" "paths"))
                          (:file "frontend" :depends-on ("package"))
+                         (:file "s3"       :depends-on ("package"))
                          (:file "upstream" :depends-on ("package"))
 			 (:file "server"   :depends-on ("package"
                                                         "json"
                                                         "frontend"
-                                                        "upstream"))))
+                                                        "upstream"
+                                                        "s3"))))
 
                (:module main
                         :depends-on ("common" "config" "repo" "animal" "server")
