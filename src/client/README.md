@@ -39,16 +39,16 @@ To be able to use the pginstall extension you need to edit your
   Add `pginstall` to the `custom_variable_classes` setting if you're using
   9.1, in 9.2 and following this setting disapeared.
 
-* `pginstall.archive_directory`
+* `pginstall.archive_dir`
 
   Filesystem path where to download extensions *archives* to.
   
-* `pginstall.control_directory`
+* `pginstall.control_dir`
 
   Filesystem path where to install extensions control files, defaults to
   `$(pg_config --sharedir)/extension/`.
   
-* `pginstall.extension_directory`
+* `pginstall.extension_dir`
 
   Filesystem path where to install extension contents: module, scripts,
   auxilliary control files and docs.

@@ -164,7 +164,7 @@ them to the file:
     local_preload_libraries = 'pginstall'
     pginstall.archive_dir   = '/var/cache/pginstall/fetch'
     pginstall.control_dir   = '/Users/dim/pgsql/ddl/share/extension'
-    pginstall.extension_dir = '/usr/share/pginstall'
+    pginstall.extension_dir = '/var/lib/pginstall'
     pginstall.repository    = 'http://localhost:8042/'
     pginstall.custom_path   = '/etc/pginstall/custom'
     #pginstall.whitelist     = 'hstore,ltree,prefix,plproxy'
@@ -215,7 +215,7 @@ something like the following:
      pginstall.archive_dir   | /var/cache/pginstall/fetch
      pginstall.control_dir   | /Users/dim/pgsql/ddl/share/extension
      pginstall.custom_path   | /etc/pginstall/custom
-     pginstall.extension_dir | /usr/share/pginstall
+     pginstall.extension_dir | /var/lib/pginstall
      pginstall.repository    | http://localhost:8042/
      pginstall.sudo          | on
      pginstall.whitelist     | hstore,ltree,prefix,plproxy
