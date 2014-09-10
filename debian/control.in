@@ -1,7 +1,7 @@
 Source: pginstall
 Priority: extra
-Maintainer: Debian PostgreSQL Maintainers <pkg-postgresql-public@lists.alioth.debian.org>
-Uploaders: Dimitri Fontaine <dimitri@2ndQuadrant.fr>, Christoph Berg <myon@debian.org>
+Maintainer: Dimitri Fontaine <dim@tapoueh.org>
+Uploaders: Christoph Berg <myon@debian.org>
 Build-Depends: debhelper (>= 9), postgresql-server-dev-all, sbcl (>= 1.2.0), libbsd-dev, libjansson4, libcurl3, libarchive-dev, buildapp, cl-asdf (>= 3.0.3), cl-postmodern, cl-esrap, cl-drakma, cl-local-time, cl-py-configparser, cl-split-sequence, cl-puri, cl-ppcre, cl-alexandria, cl-hunchentoot, cl-yason, cl-closer-mop, cl-daemon, cl-who, cl-markdown, cl-github-v3, cl-zs3, cl-bordeaux-threads (>= 0.8.3)
 Standards-Version: 3.9.5
 Section: database
@@ -14,10 +14,10 @@ Package: pginstall
 Section: database
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}, make, git
-Description: The PostgreSQL Extension Installer
- This package implements a PostgreSQL Extension Installer server and build
- farm management console. It needs to be installed on the central server and
- the buildfarm clients where the extension build happens.
+Description: PostgreSQL Extension Installer
+ PostgreSQL Extension Installer server and build farm management
+ console. Install this package on the central server and the buildfarm
+ clients where the extension build happens.
  .
  It's possible to then publish extension binary archives as static files
  over HTTP, and to host them on Amazon S3, so you're forced into using the
@@ -27,10 +27,9 @@ Package: postgresql-PGVERSION-pginstall
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, postgresql-PGVERSION
-Description: The PostgreSQL Extension Installer
- This extension implements the client-side of the PostgreSQL Extension
- Installer and allows you to easily install source or binary extensions that
- you fetch from a trusted server.
+Description: PostgreSQL Extension Installer
+ Client-side of the PostgreSQL Extension Installer, allows you to easily
+ install source or binary extensions that you fetch from a trusted server.
  .
  This extension implements a form of sudo facility, allowing non superuser
  to install an extension on your PostgreSQL Server, when in use.

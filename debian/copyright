@@ -1,10 +1,10 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: pgextwlist
-Source: https://github.com/dimitri/pgextwlist
+Upstream-Name: pginstall
+Source: https://github.com/dimitri/pginstall
 
 Files: *
 Copyright: 2011-2013 Dimitri Fontaine <dimitri@2ndQuadrant.fr>
-License: The PostgreSQL License
+License: PostgreSQL
  Permission to use, copy, modify, and distribute this software and its
  documentation for any purpose, without fee, and without a written agreement
  is hereby granted, provided that the above copyright notice and this

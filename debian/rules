@@ -20,7 +20,7 @@ override_dh_auto_build:
                  --output build/bin/pginstall
 
 override_dh_strip:
-	# do nothing
+	dh_strip --exclude=/usr/bin/pginstall
 
 override_dh_auto_install:
 	# do nothing
