@@ -35,6 +35,9 @@ override_dh_install:
 	# remove docs that belong elsewhere
 	rm -rf debian/*/usr/share/doc/postgresql-doc-*
 
+	dh_install build/bin/pginstall usr/bin
+	dh_install debian/pginstall.ini /etc
+
 override_dh_installdocs:
 	dh_installdocs --all README.md doc/*.md
 

@@ -1,4 +1,7 @@
+etc
+usr/bin
 var/log/pginstall
 var/cache/pginstall
 var/cache/pginstall/build
 var/cache/pginstall/archives
+usr/share/doc/pginstall
