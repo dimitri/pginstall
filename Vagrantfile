@@ -11,6 +11,21 @@ Vagrant.configure("2") do |config|
 
     config.vm.network :forwarded_port, host: 8242, guest: 8042
 
+    config.vm.provision :file do |file|
+      file.source      = 'conf/gpg-agent.conf'
+      file.destination = '/home/vagrant/.gnupg/gpg-agent.conf'
+    end
+
+    config.vm.provision :file do |file|
+      file.source      = 'conf/gpg.conf'
+      file.destination = '/home/vagrant/.gnupg/gpg.conf'
+    end
+
+    config.vm.provision :file do |file|
+      file.source      = 'conf/devscripts'
+      file.destination = '/home/vagrant/.devscripts'
+    end
+
     config.vm.provision "shell" do |s|
       s.path = "bootstrap-debian.sh"
       s.privileged = false

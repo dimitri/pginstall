@@ -48,6 +48,8 @@ BUILDAPP_OPTS =          --require sb-posix                      \
                          --require sb-rotate-byte
 endif
 
+DEBUILD_ROOT = /tmp/pginstall/debian/pginstall
+
 all: $(PGINSTALL)
 
 clean:
@@ -113,3 +115,13 @@ $(PGINSTALL): $(MANIFEST) $(BUILDAPP) $(LISP_SRC) $(DOCS)
 	                 --output $@
 
 pginstall: $(PGINSTALL) ;
+
+deb:
+	# intended for use on a debian system
+	mkdir -p $(DEBUILD_ROOT) && rm -rf $(DEBUILD_ROOT)/*
+	rsync -Ca --exclude=build/* ./ $(DEBUILD_ROOT)/
+	mkdir -p $(DEBUILD_ROOT)/build/bin
+	cd $(DEBUILD_ROOT) && pg_buildext updatecontrol && make -f debian/rules orig
+	cd $(DEBUILD_ROOT) && debuild -us -uc -sa
+	cp -a /tmp/pginstall/debian/pginstall_* build/
+	cp -a /tmp/pginstall/debian/postgresql-*-pginstall* build/

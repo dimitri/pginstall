@@ -1,0 +1,2 @@
+build/bin/pginstall /usr/bin
+debian/pginstall.ini /etc

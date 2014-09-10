@@ -1,0 +1,48 @@
+#!/usr/bin/make -f
+
+PKGVERS = $(shell dpkg-parsechangelog | awk -F '[:-]' '/^Version:/ { print substr($$2, 2) }')
+EXCLUDE = --exclude-vcs --exclude=debian --exclude=build
+
+include /usr/share/postgresql-common/pgxs_debian_control.mk
+clean: debian/control
+
+.PHONY: debian/control
+
+override_dh_auto_build:
+	buildapp --logfile /tmp/build.log                   \
+                 --asdf-path .                              \
+                 --asdf-tree /usr/share/common-lisp/systems \
+                 --load-system pginstall               	    \
+                 --load debian/settings.lisp                \
+                 --entry pginstall:main                     \
+                 --dynamic-space-size 4096                  \
+                 --compress-core                    	    \
+                 --output build/bin/pginstall
+
+override_dh_strip:
+	# do nothing
+
+override_dh_auto_install:
+	# do nothing
+
+override_dh_install:
+	# build all supported versions
+	for v in $(shell pg_buildext supported-versions);       \
+	do                                                      \
+		make -C src/client PG_CONFIG=/usr/lib/postgresql/$$v/bin/pg_config DESTDIR=$(CURDIR)/debian/postgresql-$$v-pginstall install;         \
+	done
+
+	# remove docs that belong elsewhere
+	rm -rf debian/*/usr/share/doc/postgresql-doc-*
+
+override_dh_installdocs:
+	dh_installdocs --all README.md doc/*.md
+
+override_dh_link:
+	set -ex; for v in $(shell pg_buildext supported-versions); do mkdir debian/postgresql-$$v-pginstall/usr/lib/postgresql/$$v/lib/plugins; ln -s ../pginstall.so debian/postgresql-$$v-pginstall/usr/lib/postgresql/$$v/lib/plugins; done
+
+orig: clean
+	cd .. && tar czf pginstall_$(PKGVERS).orig.tar.gz $(EXCLUDE) pginstall
+
+%:
+	dh $@ 
