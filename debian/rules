@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 PKGVERS = $(shell dpkg-parsechangelog | awk -F '[:-]' '/^Version:/ { print substr($$2, 2) }')
-EXCLUDE = --exclude-vcs --exclude=debian --exclude=build
+EXCLUDE = --exclude-vcs --exclude=debian --exclude=build --exclude=.vagrant
 
 include /usr/share/postgresql-common/pgxs_debian_control.mk
 clean: debian/control
@@ -29,7 +29,7 @@ override_dh_install:
 	# build all supported versions
 	for v in $(shell pg_buildext supported-versions);       \
 	do                                                      \
-		make -C src/client PG_CONFIG=/usr/lib/postgresql/$$v/bin/pg_config DESTDIR=$(CURDIR)/debian/postgresql-$$v-pginstall install;         \
+		make -C src/client PG_CONFIG=/usr/lib/postgresql/$$v/bin/pg_config DESTDIR=$(CURDIR)/debian/postgresql-$$v-pginstall clean install;         \
 	done
 
 	# remove docs that belong elsewhere

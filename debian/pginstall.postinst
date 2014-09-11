@@ -1,0 +1,26 @@
+#! /bin/sh
+
+set -e
+
+if [ "$1" = configure ]; then
+    # Make sure the administrative user exists
+    if ! getent passwd pginstall > /dev/null; then
+        adduser --system --home /var/cache/pginstall --no-create-home \
+                --shell /bin/bash --group --gecos "pginstall administrator" pginstall
+    fi
+
+    # ensure home directory ownership
+    mkdir -p /var/cache/pginstall
+    su -s /bin/sh pginstall -c "test -O /var/cache/pginstall &&
+            test -G /var/cache/pginstall" || \
+        chown pginstall:pginstall /var/cache/pginstall
+
+    # nicer log directory permissions
+    mkdir -p /var/log/pginstall
+    chmod 1775 /var/log/pginstall
+    chown root:pginstall /var/log/pginstall
+fi
+
+#DEBHELPER#
+
+exit 0

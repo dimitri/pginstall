@@ -1,5 +1,6 @@
 etc
 usr/bin
+var/run
 var/log/pginstall
 var/cache/pginstall
 var/cache/pginstall/build

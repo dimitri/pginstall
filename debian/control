@@ -2,7 +2,7 @@ Source: pginstall
 Priority: extra
 Maintainer: Dimitri Fontaine <dimitri@2ndQuadrant.fr>
 Uploaders: Christoph Berg <myon@debian.org>
-Build-Depends: debhelper (>= 9), postgresql-server-dev-all, sbcl (>= 1.2.0), libbsd-dev, libjansson4, libcurl3, libarchive-dev, buildapp, cl-asdf (>= 3.0.3), cl-postmodern, cl-esrap, cl-drakma, cl-local-time, cl-py-configparser, cl-split-sequence, cl-puri, cl-ppcre, cl-alexandria, cl-hunchentoot, cl-yason, cl-closer-mop, cl-daemon, cl-who, cl-markdown, cl-github-v3, cl-zs3, cl-bordeaux-threads (>= 0.8.3)
+Build-Depends: debhelper (>= 9), postgresql-server-dev-all, sbcl (>= 1.2.0), libjansson4, libcurl3, libarchive-dev, buildapp, cl-asdf (>= 3.0.3), cl-postmodern, cl-esrap, cl-drakma, cl-local-time, cl-py-configparser, cl-split-sequence, cl-puri, cl-ppcre, cl-alexandria, cl-hunchentoot, cl-yason, cl-closer-mop, cl-daemon, cl-who, cl-markdown, cl-github-v3, cl-zs3, cl-bordeaux-threads (>= 0.8.3)
 Standards-Version: 3.9.5
 Section: database
 Homepage: https://github.com/dimitri/pginstall
