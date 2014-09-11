@@ -11,6 +11,10 @@
            #:set-config-filename
            #:expand-user-homedir-pathname
 
+           #:*pidfile*
+           #:read-pid
+           #:kill-pid
+
            ;; repository server
            #:*dburi*
            #:*listen-port*

@@ -7,6 +7,9 @@
 (defvar *config-filename* "~/.pginstall.ini"
   "Where to store pginstall configuration.")
 
+(defparameter *pidfile* "~/.pginstall.pid"
+  "pginstall pid file")
+
 (defparameter *repo-logfile* "/tmp/pginstall-repo.log")
 (defparameter *http-logfile* "/tmp/pginstall-http.log")
 
@@ -73,6 +76,7 @@
   '(("server"
      ("dburi"        *dburi*           validate-dburi)
      ("listen-port"  *listen-port*     parse-integer)
+     ("pidfile"      *pidfile*         check-file-path)
      ("repo-logfile" *repo-logfile*    check-file-path)
      ("http-logfile" *http-logfile*    check-file-path)
      ("archive-path" *archive-path*    check-and-make-directory)
@@ -180,3 +184,21 @@
    (directory-namestring (uiop:parse-unix-namestring path)))
   ;; then return path itself
   path)
+
+
+;;;
+;;; pidfile reading
+;;;
+(defun read-pid (&optional (pidfile *pidfile*))
+  "Read the server's pid from *pidfile* and return it as a string."
+  (with-open-file (s pidfile) (read-line s)))
+
+(defun kill-pid (pid &optional (sig "TERM"))
+  "Send given SIG to Unix process PID."
+  (multiple-value-bind (output error code)
+      (uiop:run-program `("/bin/kill" ,(format nil "-~a" sig) ,pid)
+                        :output :string
+                        :error :string
+                        :ignore-error-status t)
+    (declare (ignore output error))
+    (= 0 code)))

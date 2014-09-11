@@ -234,25 +234,26 @@
     (unless (and status (string= "OK" status))
       (daemon:daemonize :output *repo-logfile*
                         :error  *repo-logfile*
+                        :pidfile *pidfile*
                         :exit-parent t
                         :sigterm (lambda (sig)
                                    (declare (ignore sig))
                                    (stop-server)))
-      (format t "PLOP~%")
-      (format *terminal-io* "PLIIP~%")
-      (format *repo-logfile* "AAAH~%")
       (start-server)
       (loop :while *server-is-running*
-         :do (format t "still wow!~%")
          :do (sleep 1)))))
 
 (define-command (("server" "stop") ())
     "stop the currently running server"
-  (query-repo-server 'terminate 'yourself))
+  (kill-server))
 
 (define-command (("server" "status") ())
     "get the status of the currently running server"
   (query-repo-server 'status))
+
+(define-command (("server" "pid") ())
+    "prints the PID of the server, if running"
+  (format t "~a~%" (read-pid *pidfile*)))
 
 (define-command (("server" "reload") ())
     "have the currently running server reload its config file"
@@ -293,7 +294,7 @@
   (add-pgconfig-on-server path))
 
 (define-command (("animal" "config") ())
-    "ask the server for a name for the current animal"
+    "print the current configuration"
   (write-current-config *standard-output*))
 
 (define-command (("animal" "build") ())
@@ -384,3 +385,12 @@
 
       (format t "~s~%" (uiop:native-namestring pathname))))
 
+
+
+;;;
+;;; Support code for the previous commands
+;;;
+(defun kill-server (&optional (sig "TERM"))
+  "Send a signal to the server for it to stop"
+  (when (kill-pid (read-pid *pidfile*) sig)
+    (ignore-errors (delete-file *pidfile*))))
