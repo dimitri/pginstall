@@ -1,0 +1,160 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "PGINSTALL" "1" "September 2014" "ff" ""
+.
+.SH "NAME"
+\fBpginstall\fR \- PostgreSQL data loader
+.
+.SH "SYNOPSIS"
+\fBpginstall\fR [\fIoptions\fR] [\fIcommand\-file\fR]\.\.\.
+.
+.SH "DESCRIPTION"
+pginstall is The PostgreSQL Extension Installer server\.
+.
+.SH "OPTIONS"
+.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Show command usage summary and exit\.
+.
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Show pginstall version string and exit\.
+.
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+Be verbose\.
+.
+.TP
+\fB\-d\fR, \fB\-\-debug\fR
+Show debug level information messages\.
+.
+.TP
+\fB\-c\fR, \fB\-\-config\fR
+Use the given configuration file (default to "~/\.pginstall\.ini")\.
+.
+.SH "COMMANDS"
+The pginstall binary allows both running and controling the pginstall server and managing extension builds and upload from a buildfarm animal\.
+.
+.SS "CONFIGURATION CONTROL"
+While it\'s possible to ship a configuration file or to prepare it by hand, the following commands allow to control the setup from the command line\.
+.
+.IP "\(bu" 4
+\fBconfig [ name ] [ value ]\fR
+.
+.IP
+Without arguments, print the whole configuration file content\. When given a variable \fIname\fR, print its current value\. When given both a \fIname\fR and a \fIvalue\fR, set the configuration variable to the given value\.
+.
+.IP "\(bu" 4
+\fBconfig get <name>\fR
+.
+.IP
+Print the current value of the configuration variable \fIname\fR\.
+.
+.IP "\(bu" 4
+\fBconfig set <name> <value>\fR
+.
+.IP
+Set the variable \fIname\fR to the given \fIvalue\fR\.
+.
+.IP "" 0
+.
+.SS "SERVER CONTROL"
+The PostgreSQL Extension Installer comes with a PostgreSQL plugin that downloads static files: that part doesn\'t need any server at all\. This server is meant to be used by maintainers of a set of extension archives, when they want to ease the maintenance and setup of the building\.
+.
+.IP "\(bu" 4
+\fBserver start\fR
+.
+.IP
+Start the embedded pginstall HTTP server on the port it\'s been setup to listen to, which defaults to 8042\. The
+.
+.IP "\(bu" 4
+\fBserver stop\fR
+.
+.IP
+Stops the server\.
+.
+.IP "\(bu" 4
+\fBserver status\fR
+.
+.IP
+Print the result of querying the HTTP status API against the (hopefully) running server\.
+.
+.IP "\(bu" 4
+\fBserver reload\fR
+.
+.IP
+Forces the server to reload its configuration file\.
+.
+.IP "\(bu" 4
+\fBserver setup <dburi>\fR
+.
+.IP
+Connects to the PostgreSQL database specified with the \fIdburi\fR parameter and install the database model there\.
+.
+.IP "" 0
+.
+.SS "BUILD FARM ANINAL CONTROL"
+The PostgreSQL Extension Installer allows controlling a build farm where \fIanimal\fR are building extensions binary archives to be distributed to users\.
+.
+.IP "\(bu" 4
+\fBanimal register\fR
+.
+.IP
+Before using an animal as a build farm member, it needs to register against the server\. That only allows the server to remember if a build has been started on some animal\. This command assigns a name (randomly, from an hard\-coded list) to the current animal and sets the name into its configuration file\.
+.
+.IP "\(bu" 4
+\fBanimal find pgconfig\fR
+.
+.IP
+Search in the \fB$PATH\fR for \fBpg_config\fR entries to use when building an extension\. That list is dynamically built each time an extension is to be built, so the command serves to debug this animal automated setup\.
+.
+.IP "\(bu" 4
+\fBanimal list pgconfig\fR
+.
+.IP
+Print the \fBpg_config\fR entries known to the server for this animal\. The list is sent at register time and can evolve without pginstall being involved\.
+.
+.IP "\(bu" 4
+\fBanimal add pgconfig <path>\fR
+.
+.IP
+Send a new \fBpg_config\fR path entry to the server, for maintaining the information up\-to\-date\.
+.
+.IP "\(bu" 4
+\fBanimal config\fR
+.
+.IP
+Print the current animal configuration\.
+.
+.IP "\(bu" 4
+\fBanimal build\fR
+.
+.IP
+Ask the server for an extension to build for our platform, then build the extension archives (one archve per \fBpg_config\fR entry) and upload them all on the server\.
+.
+.IP "\(bu" 4
+\fBwhoami\fR
+.
+.IP
+Print information about the current animal: its name and platform\.
+.
+.IP "" 0
+.
+.SS "DEVELOPPER USAGE (SINGLE MACHINE)"
+It\'s also possible to use pginstall as a developper, to simply build an archive for a given extension\.
+.
+.IP "\(bu" 4
+\fBbuild <uri>\fR
+.
+.IP
+Build the extension whose sources are to be found at the given git \fIuri\fR\.
+.
+.IP "" 0
+.
+.SH "AUTHOR"
+Dimitri Fontaine \fIdimitri@2ndQuadrant\.fr\fR
+.
+.SH "SEE ALSO"
+The pginstall source code and all documentation may be downloaded from \fIhttps://github\.com/dimitri/pginstall/\fR\.

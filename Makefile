@@ -52,6 +52,9 @@ DEBUILD_ROOT = /tmp/pginstall/debian/pginstall
 
 all: $(PGINSTALL)
 
+docs:
+	ronn -roff pginstall.1.md
+
 clean:
 	rm -rf $(LIBS) $(QLDIR) $(MANIFEST) $(BUILDAPP) $(PGINSTALL)
 
