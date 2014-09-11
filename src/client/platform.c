@@ -15,11 +15,6 @@
 #include <unistd.h>
 #include <sys/utsname.h>
 
-/* Only include bsd/stdio.h on debian GNU/Linux systems. */
-#ifdef __GLIBC__
-#include <bsd/stdio.h>
-#endif
-
 #include "storage/fd.h"
 
 char *read_debian_version(char *filename);
@@ -141,6 +136,7 @@ read_centos_version(char *filename)
     return pstrdup(version);
 }
 
+#ifdef __APPLE__
 /*
  * To discover OSX name and version, the best way seems to be parsing the
  * /System/Library/CoreServices/SystemVersion.plist property file, which is an
@@ -195,3 +191,4 @@ parse_osx_name_and_version(Platform platform)
     }
     FreeFile(file);
 }
+#endif
