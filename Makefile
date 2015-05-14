@@ -72,6 +72,7 @@ quicklisp: $(QLDIR)/setup.lisp ;
 
 $(LIBS): $(QLDIR)/setup.lisp
 	$(CL) $(CL_OPTS) --load $(QLDIR)/setup.lisp               \
+             --eval '(push "$(PWD)/" asdf:*central-registry*)'    \
 	     --eval '(ql:quickload "pginstall")'                  \
 	     --eval '(quit)'
 	touch $@
