@@ -65,7 +65,7 @@ platform you want to support.
 #### Extension
 
 A kind of a PostgreSQL plugin, made of a *control file* needed to help
-PostgreSQL know how to install the extension, one or more *auxilliary
+PostgreSQL know how to install the extension, one or more *auxiliary
 control files* that allow changing meta-data from an extension release to
 the next, one or more *SQL script files* that are going to be run by
 PostgreSQL for creating the extension's objects, and possibly a *dynamic
