@@ -596,6 +596,9 @@ execute_custom_script(const char *filename, const char *schemaName)
 #if PG_MAJOR_VERSION > 901
                                  , 0
 #endif
+#if PG_MAJOR_VERSION >= 905
+                                 , false
+#endif
             );
     if (log_min_messages < WARNING)
         (void) set_config_option("log_min_messages", "warning",
@@ -603,6 +606,9 @@ execute_custom_script(const char *filename, const char *schemaName)
                                  GUC_ACTION_SAVE, true
 #if PG_MAJOR_VERSION > 901
                                  , 0
+#endif
+#if PG_MAJOR_VERSION >= 905
+                                 , false
 #endif
             );
 
@@ -624,6 +630,9 @@ execute_custom_script(const char *filename, const char *schemaName)
                              GUC_ACTION_SAVE, true
 #if PG_MAJOR_VERSION > 901
                              , 0
+#endif
+#if PG_MAJOR_VERSION >= 905
+                             , false
 #endif
         );
 
