@@ -559,7 +559,11 @@ get_current_database_owner_name()
     else
         return NULL;
 
-    return GetUserNameFromId(owner);
+    return GetUserNameFromId(owner
+#if PG_MAJOR_VERSION >= 905
+        , false
+#endif
+        );
 }
 
 /*
@@ -658,7 +662,11 @@ execute_custom_script(const char *filename, const char *schemaName)
                                     t_sql,
                                     CStringGetTextDatum("@current_user@"),
                                     CStringGetTextDatum(
-                                        GetUserNameFromId(GetUserId())));
+                                        GetUserNameFromId(GetUserId()
+#if PG_MAJOR_VERSION >= 905
+                                          , false
+#endif
+                                          )));
 
         /*
          * substitute the database owner for occurrences of @database_owner@
